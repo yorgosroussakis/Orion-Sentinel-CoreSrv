@@ -161,8 +161,8 @@ MIT License - See [LICENSE](LICENSE)
 
 ## Support
 
-- **Issues:** https://github.com/yorgosroussakis/Orion-Sentinel-CoreSrv/issues
-- **Discussions:** https://github.com/yorgosroussakis/Orion-Sentinel-CoreSrv/discussions
+- **Issues:** https://github.com/orionsentinel/Orion-Sentinel-CoreSrv/issues
+- **Discussions:** https://github.com/orionsentinel/Orion-Sentinel-CoreSrv/discussions
 
 ---
 

@@ -251,10 +251,10 @@ case "$CMD" in
         
         # Check directories
         if [ -f "env/.env.core" ]; then
-            CONFIG_ROOT=$(grep CONFIG_ROOT env/.env.core | cut -d'=' -f2)
-            if [ -d "$CONFIG_ROOT" ]; then
+            CONFIG_ROOT=$(grep "^CONFIG_ROOT=" env/.env.core | cut -d'=' -f2- | tr -d '"' | tr -d "'")
+            if [ -n "$CONFIG_ROOT" ] && [ -d "$CONFIG_ROOT" ]; then
                 success "Config directory exists: $CONFIG_ROOT"
-            else
+            elif [ -n "$CONFIG_ROOT" ]; then
                 warn "Config directory not found: $CONFIG_ROOT"
             fi
         fi

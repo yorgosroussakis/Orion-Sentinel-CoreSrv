@@ -393,7 +393,7 @@ Add local DNS entries to Pi-hole for service discovery:
 
 ```bash
 cd ~
-git clone https://github.com/yorgosroussakis/Orion-Sentinel-CoreSrv.git Orion-Sentinel-CoreSrv
+git clone https://github.com/orionsentinel/Orion-Sentinel-CoreSrv.git Orion-Sentinel-CoreSrv
 cd Orion-Sentinel-CoreSrv
 ```
 

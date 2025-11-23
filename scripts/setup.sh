@@ -123,11 +123,15 @@ check_prerequisites() {
     fi
     
     # Check available disk space
-    local available_space=$(df -BG "$REPO_ROOT" | awk 'NR==2 {print $4}' | sed 's/G//')
-    if [ "$available_space" -gt 50 ]; then
-        success "Sufficient disk space: ${available_space}GB available"
+    local available_space=$(df -BG "$REPO_ROOT" 2>/dev/null | awk 'NR==2 {print $4}' | sed 's/G//' || echo "0")
+    if [ -n "$available_space" ] && [ "$available_space" -gt 0 ]; then
+        if [ "$available_space" -gt 50 ]; then
+            success "Sufficient disk space: ${available_space}GB available"
+        else
+            warn "Low disk space: only ${available_space}GB available (50GB+ recommended)"
+        fi
     else
-        warn "Low disk space: only ${available_space}GB available (50GB+ recommended)"
+        warn "Could not determine available disk space"
     fi
     
     if [ "$all_good" = false ]; then
@@ -443,14 +447,17 @@ EOF
     check_not_root
     check_prerequisites
     
+    # Default base directory
+    DEFAULT_BASE_DIR="/srv/orion-sentinel-core"
+    
     # Ask what to set up
     local setup_dirs=false
     local setup_env=false
     
-    if [ ! -d "/srv/orion-sentinel-core" ]; then
+    if [ ! -d "$DEFAULT_BASE_DIR" ]; then
         setup_dirs=true
     else
-        if confirm "Directory /srv/orion-sentinel-core exists. Do you want to set up directories anyway?"; then
+        if confirm "Directory $DEFAULT_BASE_DIR exists. Do you want to set up directories anyway?"; then
             setup_dirs=true
         fi
     fi
