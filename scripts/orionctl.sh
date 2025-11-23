@@ -63,7 +63,7 @@ case "$CMD" in
         info "Access Traefik at: https://traefik.local"
         ;;
     
-    up-monitoring)
+    up-observability)
         info "Starting core + monitoring profiles..."
         check_env_file "env/.env.core"
         check_env_file "env/.env.monitoring"
@@ -219,7 +219,7 @@ USAGE:
 
 STARTUP COMMANDS:
     up-core         Start core services only (Traefik + Authelia)
-    up-monitoring   Start core + monitoring (Prometheus, Grafana, Loki)
+    up-observability Start core + monitoring (Prometheus, Grafana, Loki)
     up-media        Start core + media stack (Jellyfin, *arr, qBit)
     up-full         Start all services (core + media + monitoring + maintenance)
 

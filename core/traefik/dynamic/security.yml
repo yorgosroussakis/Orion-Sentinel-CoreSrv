@@ -51,6 +51,14 @@ http:
         period: 1m
         burst: 20
     
+    # Secure chain: combines security headers + Authelia authentication
+    # Use this for admin/protected services
+    secure-chain:
+      chain:
+        middlewares:
+          - "secure-headers"
+          - "authelia-forwardauth"
+    
     # IP whitelist for admin tools (example - adjust for your network)
     # lan-only:
     #   ipWhiteList:

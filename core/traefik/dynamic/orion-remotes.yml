@@ -1,0 +1,30 @@
+http:
+  routers:
+    dns:
+      rule: "Host(`dns.local`)"
+      entryPoints:
+        - websecure
+      tls: true
+      middlewares:
+        - secure-chain@file
+      service: dns-svc
+
+    security:
+      rule: "Host(`security.local`)"
+      entryPoints:
+        - websecure
+      tls: true
+      middlewares:
+        - secure-chain@file
+      service: security-svc
+
+  services:
+    dns-svc:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.8.240"      # DNS Pi UI / admin page
+
+    security-svc:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.8.241:8080" # NetSec UI (AI stack)
