@@ -169,7 +169,7 @@ monitoring/
 
 ```bash
 # Start core + monitoring
-./scripts/orionctl.sh up-monitoring
+./scripts/orionctl.sh up-observability
 
 # Or start everything
 ./scripts/orionctl.sh up-full
