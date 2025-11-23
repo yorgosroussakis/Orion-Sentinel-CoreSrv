@@ -33,17 +33,15 @@ scrape_configs:
   # CoreSrv Targets (this machine)
   # ===========================================================================
   
-  # TODO: Add node_exporter to compose.yml for host metrics
   # CoreSrv Node Exporter (host metrics: CPU, RAM, disk, network)
   - job_name: 'coresrv-node'
     static_configs:
-      - targets: ['node-exporter:9100']
+      - targets: ['localhost:9100']
         labels:
           node: 'coresrv'
           instance: 'coresrv'
           role: 'services-hub'
 
-  # TODO: Add cAdvisor to compose.yml for container metrics
   # CoreSrv cAdvisor (Docker container metrics)
   - job_name: 'coresrv-cadvisor'
     static_configs:
@@ -62,54 +60,54 @@ scrape_configs:
   #         service: 'traefik'
 
   # ===========================================================================
-  # Pi DNS Node (Pi 5 #1) - ADJUST IPs TO MATCH YOUR NETWORK
+  # Pi DNS Node (Pi 5 #1) - Optional targets (tolerate when unavailable)
   # ===========================================================================
   
-  # TODO: Set up node_exporter on Pi DNS
-  # TODO: Adjust IP address to match your Pi DNS node
   # Pi DNS - Node Exporter
   - job_name: 'pi-dns-node'
     static_configs:
-      - targets: ['192.168.8.240:9100']  # ← ADJUST THIS IP
+      - targets: ['192.168.8.240:9100']
         labels:
           node: 'pi-dns'
           instance: 'pi-dns'
           role: 'dns-server'
+    # Tolerate target being down - Prometheus won't fail startup
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: '192.168.8.240:9100'
 
-  # TODO: Set up pihole_exporter on Pi DNS
-  # TODO: Adjust IP address to match your Pi DNS node
   # Pi DNS - Pi-hole Exporter
   # See: https://github.com/eko/pihole-exporter
   - job_name: 'pihole'
     static_configs:
-      - targets: ['192.168.8.240:9617']  # ← ADJUST THIS IP
+      - targets: ['192.168.8.240:9617']
         labels:
           node: 'pi-dns'
           service: 'pihole'
           role: 'dns-server'
 
-  # TODO: Set up unbound_exporter on Pi DNS
-  # TODO: Adjust IP address to match your Pi DNS node
   # Pi DNS - Unbound Exporter
   # See: https://github.com/letsencrypt/unbound_exporter
   - job_name: 'unbound'
     static_configs:
-      - targets: ['192.168.8.240:9167']  # ← ADJUST THIS IP
+      - targets: ['192.168.8.240:9167']
         labels:
           node: 'pi-dns'
           service: 'unbound'
           role: 'dns-server'
 
   # ===========================================================================
-  # Pi NetSec Node (Pi 5 #2) - ADJUST IPs TO MATCH YOUR NETWORK
+  # Pi NetSec Node (Pi 5 #2) - Optional targets (tolerate when unavailable)
   # ===========================================================================
   
-  # TODO: Set up node_exporter on Pi NetSec
-  # TODO: Adjust IP address to match your Pi NetSec node
   # Pi NetSec - Node Exporter
   - job_name: 'pi-netsec-node'
     static_configs:
-      - targets: ['192.168.8.241:9100']  # ← ADJUST THIS IP
+      - targets: ['192.168.8.241:9100']
         labels:
           node: 'pi-netsec'
           instance: 'pi-netsec'

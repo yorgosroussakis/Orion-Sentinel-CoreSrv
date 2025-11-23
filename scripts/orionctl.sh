@@ -63,15 +63,15 @@ case "$CMD" in
         info "Access Traefik at: https://traefik.local"
         ;;
     
-    up-monitoring)
-        info "Starting core + monitoring profiles..."
+    up-observability)
+        info "Starting core + observability profiles..."
         check_env_file "env/.env.core"
         check_env_file "env/.env.monitoring"
         docker compose \
             --env-file env/.env.core \
             --env-file env/.env.monitoring \
             --profile core --profile monitoring up -d
-        success "Core + monitoring services started"
+        success "Core + observability services started"
         info "Access Grafana at: https://grafana.local"
         info "Access Prometheus at: https://prometheus.local"
         ;;
@@ -219,7 +219,7 @@ USAGE:
 
 STARTUP COMMANDS:
     up-core         Start core services only (Traefik + Authelia)
-    up-monitoring   Start core + monitoring (Prometheus, Grafana, Loki)
+    up-observability Start core + observability (Prometheus, Grafana, Loki)
     up-media        Start core + media stack (Jellyfin, *arr, qBit)
     up-full         Start all services (core + media + monitoring + maintenance)
 

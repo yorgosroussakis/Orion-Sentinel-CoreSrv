@@ -651,7 +651,7 @@ sudo tar -czf /tmp/emergency-backup.tar.gz /srv/orion-sentinel-core/config
 # 4. Start services incrementally
 ./scripts/orionctl.sh up-core
 # Test, then:
-./scripts/orionctl.sh up-monitoring
+./scripts/orionctl.sh up-observability
 # Test, then:
 ./scripts/orionctl.sh up-full
 ```

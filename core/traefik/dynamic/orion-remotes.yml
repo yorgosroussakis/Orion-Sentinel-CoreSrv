@@ -1,0 +1,52 @@
+# Traefik Dynamic Configuration - Orion Remote Nodes Routing
+# Routes to DNS Pi and NetSec Pi admin interfaces
+# These routes tolerate unavailable backends - Traefik loads even when Pis are not deployed
+
+http:
+  routers:
+    # DNS Pi Admin Interface (Pi-hole + Unbound)
+    # Provides access to DNS Pi admin dashboard at dns.local
+    dns-pi:
+      rule: "Host(`dns.local`)"
+      entrypoints:
+        - websecure
+      service: dns-pi-service
+      tls: true
+      middlewares:
+        - secure-chain@file
+    
+    # NetSec Pi AI Stack (Orion Sentinel)
+    # Provides access to NetSec AI monitoring stack at security.local
+    netsec-pi:
+      rule: "Host(`security.local`)"
+      entrypoints:
+        - websecure
+      service: netsec-pi-service
+      tls: true
+      middlewares:
+        - secure-chain@file
+
+  services:
+    # DNS Pi backend (192.168.8.240)
+    # Port 80 - Pi-hole admin interface
+    dns-pi-service:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.8.240:80"
+        passHostHeader: false
+        healthCheck:
+          path: /
+          interval: 30s
+          timeout: 5s
+    
+    # NetSec Pi backend (192.168.8.241:8080)
+    # Port 8080 - Orion Sentinel AI stack
+    netsec-pi-service:
+      loadBalancer:
+        servers:
+          - url: "http://192.168.8.241:8080"
+        passHostHeader: false
+        healthCheck:
+          path: /
+          interval: 30s
+          timeout: 5s

@@ -1,0 +1,145 @@
+---
+###############################################################################
+#                     Authelia Configuration - Example                        #
+###############################################################################
+# This is a production-ready example configuration for Authelia SSO
+# Copy this file to configuration.yml and customize for your deployment
+#
+# Documentation: https://www.authelia.com/configuration/prologue/introduction/
+
+theme: auto  # Options: light, dark, auto
+
+server:
+  host: 0.0.0.0
+  port: 9091
+
+log:
+  level: info  # Options: trace, debug, info, warn, error
+  format: text  # Options: text, json
+
+totp:
+  disable: false
+  issuer: orion-sentinel-core.local
+  algorithm: sha1
+  digits: 6
+  period: 30
+  skew: 1
+  secret_size: 32
+
+webauthn:
+  disable: false
+  display_name: Orion Sentinel CoreSrv
+  attestation_conveyance_preference: indirect
+  user_verification: preferred
+  timeout: 60s
+
+duo_api:
+  disable: true
+
+ntp:
+  address: "time.cloudflare.com:123"
+  version: 4
+  max_desync: 3s
+  disable_startup_check: false
+  disable_failure: false
+
+authentication_backend:
+  password_reset:
+    disable: false
+  refresh_interval: 5m
+  file:
+    path: /config/users.yml
+    watch: true
+    password:
+      algorithm: argon2
+      argon2:
+        variant: argon2id
+        iterations: 3
+        memory: 65536
+        parallelism: 4
+        key_length: 32
+        salt_length: 16
+
+access_control:
+  default_policy: deny
+  rules:
+    # Bypass Authelia for public endpoints (if any)
+    # - domain: "status.local"
+    #   policy: bypass
+
+    # Require authentication for all admin services
+    - domain:
+        - "traefik.local"
+        - "prometheus.local"
+        - "grafana.local"
+        - "qbit.local"
+        - "sonarr.local"
+        - "radarr.local"
+        - "bazarr.local"
+        - "prowlarr.local"
+        - "requests.local"
+        - "recommend.local"
+        - "cloud.local"
+        - "search.local"
+        - "home.local"
+        - "status.local"
+        - "dns.local"
+        - "security.local"
+      policy: one_factor
+
+    # Example: Two-factor for sensitive services
+    # - domain:
+    #     - "traefik.local"
+    #     - "dns.local"
+    #     - "security.local"
+    #   policy: two_factor
+
+session:
+  name: authelia_session
+  domain: local  # Must match your base domain
+  same_site: lax
+  expiration: 12h
+  inactivity: 5m
+  remember_me_duration: 1M
+
+  redis:
+    host: redis
+    port: 6379
+    # password: authelia
+    # database_index: 0
+
+regulation:
+  max_retries: 5
+  find_time: 2m
+  ban_time: 10m
+
+storage:
+  encryption_key: # Set via AUTHELIA_STORAGE_ENCRYPTION_KEY env var
+  local:
+    path: /config/db.sqlite3
+
+notifier:
+  disable_startup_check: false
+  filesystem:
+    filename: /config/notifications.txt
+
+  # SMTP notifier example (uncomment and configure to use email)
+  # smtp:
+  #   host: smtp.gmail.com
+  #   port: 587
+  #   timeout: 5s
+  #   username: your-email@gmail.com
+  #   password: your-app-password
+  #   sender: "Authelia <authelia@yourdomain.com>"
+  #   identifier: localhost
+  #   subject: "[Authelia] {title}"
+  #   startup_check_address: test@authelia.com
+  #   disable_require_tls: false
+  #   disable_html_emails: false
+
+###############################################################################
+# Environment Variables Used (set in docker-compose.yml):
+# - AUTHELIA_JWT_SECRET
+# - AUTHELIA_SESSION_SECRET
+# - AUTHELIA_STORAGE_ENCRYPTION_KEY
+###############################################################################
