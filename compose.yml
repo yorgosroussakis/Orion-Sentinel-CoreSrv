@@ -365,6 +365,8 @@ services:
     restart: unless-stopped
     pid: host
     network_mode: host
+    # Note: Uses host network for accurate host metrics
+    # Prometheus scrapes via localhost:9100 (not container name)
     command:
       - '--path.rootfs=/host'
     volumes:
