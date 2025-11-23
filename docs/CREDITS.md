@@ -2,7 +2,7 @@
 
 ## Upstream Inspiration
 
-This repository (`orion-dell-hub`) is a **derived work** that draws heavy inspiration from two excellent open-source projects. We are deeply grateful to the maintainers and contributors of these repositories.
+This repository (`Orion-Sentinel-CoreSrv`) is a **derived work** that draws heavy inspiration from two excellent open-source projects. We are deeply grateful to the maintainers and contributors of these repositories.
 
 ---
 
@@ -155,7 +155,7 @@ We use excellent open-source Docker images maintained by:
 
 ## Differences from Upstream
 
-While heavily inspired by the upstream projects, `orion-dell-hub` differs in several key ways:
+While heavily inspired by the upstream projects, `Orion-Sentinel-CoreSrv` differs in several key ways:
 
 ### Architectural Differences
 
@@ -184,7 +184,7 @@ While heavily inspired by the upstream projects, `orion-dell-hub` differs in sev
 2. **Opinionated Defaults:**
    - ProtonVPN as default VPN provider
    - Europe/Amsterdam as default timezone
-   - Explicit `/srv/orion` directory structure
+   - Explicit `/srv/orion-sentinel-core` directory structure
 
 3. **Security Posture:**
    - All services behind Authelia by default
@@ -209,7 +209,7 @@ While heavily inspired by the upstream projects, `orion-dell-hub` differs in sev
 
 All mistakes, bugs, and questionable decisions in this repository are **ours alone**, not the fault of the upstream projects.
 
-If you find issues with `orion-dell-hub`, please file them in this repository:
+If you find issues with `Orion-Sentinel-CoreSrv`, please file them in this repository:
 - **Issues:** https://github.com/yorgosroussakis/Orion-Sentinel-CoreSrv/issues
 
 If you want to use the original upstream projects directly:
@@ -220,7 +220,7 @@ If you want to use the original upstream projects directly:
 
 ## License
 
-This repository (`orion-dell-hub`) is released under the **MIT License** (same as AdrienPoupa/docker-compose-nas).
+This repository (`Orion-Sentinel-CoreSrv`) is released under the **MIT License** (same as AdrienPoupa/docker-compose-nas).
 
 ```
 MIT License

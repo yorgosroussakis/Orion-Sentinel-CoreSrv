@@ -2,7 +2,7 @@
 
 ## Overview
 
-This repository (`orion-dell-hub`) is **not a fork** of any upstream project. Instead, it is a **derived work** that cherry-picks patterns, configurations, and best practices from two excellent upstream repositories:
+This repository (`Orion-Sentinel-CoreSrv`) is **not a fork** of any upstream project. Instead, it is a **derived work** that cherry-picks patterns, configurations, and best practices from two excellent upstream repositories:
 
 1. **[AdrienPoupa/docker-compose-nas](https://github.com/AdrienPoupa/docker-compose-nas)**
    - NAS/media stack with Traefik, VPN, Homepage, maintenance tools
@@ -74,10 +74,10 @@ For **navilg/media-stack:**
 
 #### C. Note Current Versions
 
-Record current versions in orion-dell-hub:
+Record current versions in Orion-Sentinel-CoreSrv:
 
 ```bash
-cd ~/orion-dell-hub
+cd ~/Orion-Sentinel-CoreSrv
 git log --oneline -1  # Note current commit
 docker compose config | grep image:  # Note current image tags
 ```
@@ -253,7 +253,7 @@ cp compose.yml compose.yml.backup
 cp -r env env.backup
 
 # Backup critical data
-sudo tar -czf ~/orion-backup-$(date +%Y%m%d).tar.gz /srv/orion/config
+sudo tar -czf ~/orion-backup-$(date +%Y%m%d).tar.gz /srv/orion-sentinel-core-sentinel-core/config
 ```
 
 #### B. Test with Limited Profile First
@@ -382,7 +382,7 @@ Use this table to track synchronization history:
 
 | Date | Upstream Repo | Reference (tag/commit) | Changes Pulled | Notes |
 |------|---------------|----------------------|----------------|-------|
-| 2025-11-23 | Initial setup | - | Created orion-dell-hub from upstream patterns | Baseline configuration |
+| 2025-11-23 | Initial setup | - | Created Orion-Sentinel-CoreSrv from upstream patterns | Baseline configuration |
 | | | | | |
 | | | | | |
 | | | | | |
@@ -396,10 +396,10 @@ Use this table to track synchronization history:
 ```bash
 # Compare compose files
 cd ~/upstream-repos
-diff -u docker-compose-nas/docker-compose.yml ~/orion-dell-hub/compose.yml
+diff -u docker-compose-nas/docker-compose.yml ~/Orion-Sentinel-CoreSrv/compose.yml
 
 # Compare env examples
-diff -u docker-compose-nas/.env.example ~/orion-dell-hub/env/.env.media.example
+diff -u docker-compose-nas/.env.example ~/Orion-Sentinel-CoreSrv/env/.env.media.example
 ```
 
 ### Check Image Updates

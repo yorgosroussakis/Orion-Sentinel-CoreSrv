@@ -17,7 +17,7 @@ This document describes the complete architecture of the Orion home lab, a 3-nod
         +--------------+--------------+
         |              |              |
         v              v              v
-   [Pi 5 #1]      [Pi 5 #2]      [Dell Mini PC]
+   [Pi 5 #1]      [Pi 5 #2]      [CoreSrv]
   DNS Stack      NetSec Stack    Services Hub
   Pi-hole        Orion           (This Repo)
   Unbound        Sentinel
@@ -34,7 +34,7 @@ This document describes the complete architecture of the Orion home lab, a 3-nod
   - High Availability VIP (Keepalived for failover)
 - **Network Role:** Primary DNS for entire home lab (192.168.1.x)
 - **Repository:** Separate dedicated DNS repo
-- **Monitoring:** Exports metrics to Dell monitoring stack
+- **Monitoring:** Exports metrics to CoreSrv monitoring stack
 
 #### Pi 5 #2: Network Security & AI
 - **Purpose:** Network security monitoring, threat detection, AI-powered analysis
@@ -44,19 +44,19 @@ This document describes the complete architecture of the Orion home lab, a 3-nod
   - AI-powered threat detection
   - Security event correlation
 - **Repository:** Separate Orion Sentinel repo
-- **Monitoring:** Exports metrics to Dell monitoring stack
+- **Monitoring:** Exports metrics to CoreSrv monitoring stack
 
-#### Dell Mini PC: Central Services Hub (This Repository)
+#### CoreSrv: Central Services Hub (This Repository)
 - **Purpose:** Primary services host for media, cloud, search, monitoring, and automation
-- **Services:** See "Dell Services Stack" section below
+- **Services:** See "CoreSrv Services Stack" section below
 - **Network Role:** All user-facing services, reverse proxy, SSO
 - **DNS:** All lookups go through Pi 5 #1 (Pi-hole)
 
-## Dell Services Stack (This Repository)
+## CoreSrv Services Stack (This Repository)
 
 ### Docker Network Architecture
 
-The Dell mini PC runs all services in Docker with isolated networks for security and traffic control:
+The CoreSrv runs all services in Docker with isolated networks for security and traffic control:
 
 ```
                       [Traefik Reverse Proxy]
@@ -183,7 +183,7 @@ Authelia (checks authentication)
 
 ### Monitoring Flow
 ```
-Dell Services + Pi DNS + Pi NetSec
+CoreSrv Services + Pi DNS + Pi NetSec
     |
     v
 Prometheus (scrapes metrics every 15s)
@@ -200,7 +200,7 @@ User views dashboards at https://grafana.local
 ### Host Directory Structure
 
 ```
-/srv/orion/
+/srv/orion-sentinel-core-sentinel-core/
 ├── config/                    # Application configurations
 │   ├── traefik/
 │   ├── authelia/
@@ -276,7 +276,7 @@ The media directory structure follows Trash-Guides recommendations:
 ## Monitoring & Observability
 
 ### Metrics Collection
-- Prometheus scrapes all services (Dell + Pi DNS + Pi NetSec)
+- Prometheus scrapes all services (CoreSrv + Pi DNS + Pi NetSec)
 - Node exporters on all hosts (CPU, RAM, disk, network)
 - cAdvisor for container metrics
 - Service-specific exporters (Pi-hole, Traefik, etc.)
@@ -288,7 +288,7 @@ The media directory structure follows Trash-Guides recommendations:
 
 ### Uptime Monitoring
 - Uptime Kuma monitors service availability
-- Tracks Dell services, Pi services, external connectivity
+- Tracks CoreSrv node services, Pi services, external connectivity
 - Alerting via notifications (email, Slack, etc.)
 
 ## Disaster Recovery
@@ -296,12 +296,12 @@ The media directory structure follows Trash-Guides recommendations:
 ### Backup Strategy
 
 **Critical Data:**
-1. Nextcloud: `/srv/orion/cloud/` (daily encrypted backups)
-2. Home Assistant: `/srv/orion/config/homeassistant/` (weekly backups)
+1. Nextcloud: `/srv/orion-sentinel-core-sentinel-core/cloud/` (daily encrypted backups)
+2. Home Assistant: `/srv/orion-sentinel-core-sentinel-core/config/homeassistant/` (weekly backups)
 3. Monitoring: Grafana dashboards, Prometheus data (optional)
 
 **Configuration:**
-- All configuration in `/srv/orion/config/`
+- All configuration in `/srv/orion-sentinel-core-sentinel-core/config/`
 - Backed up weekly
 - Version controlled where possible
 
@@ -311,7 +311,7 @@ The media directory structure follows Trash-Guides recommendations:
 
 ### Recovery Plan
 1. Reinstall host OS (Ubuntu/Debian)
-2. Restore `/srv/orion/` from backup
+2. Restore `/srv/orion-sentinel-core-sentinel-core/` from backup
 3. Clone this repository
 4. Copy `.env.*.example` → `.env.*` and adjust paths
 5. Run `docker compose --profile all up -d`

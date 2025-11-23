@@ -1,6 +1,6 @@
-# Dell Mini PC Setup Guide
+# CoreSrv Setup Guide
 
-This guide walks through setting up the Dell mini PC as the Orion home lab services hub.
+This guide walks through setting up the CoreSrv as the Orion home lab services hub.
 
 ## Table of Contents
 
@@ -20,7 +20,7 @@ This guide walks through setting up the Dell mini PC as the Orion home lab servi
 
 ### Hardware Requirements
 
-- **Dell Mini PC** (recommended: 16GB+ RAM, 256GB+ SSD)
+- **CoreSrv** (recommended: 16GB+ RAM, 256GB+ SSD)
 - **Storage:**
   - System: 50GB minimum
   - Config: 10GB minimum
@@ -134,7 +134,7 @@ sudo netplan apply
 ### 4. Set Hostname
 
 ```bash
-sudo hostnamectl set-hostname orion-dell-hub
+sudo hostnamectl set-hostname Orion-Sentinel-CoreSrv
 ```
 
 Edit `/etc/hosts`:
@@ -147,7 +147,7 @@ Add:
 
 ```
 127.0.0.1       localhost
-192.168.1.100   orion-dell-hub.local orion-dell-hub
+192.168.1.100   Orion-Sentinel-CoreSrv.local Orion-Sentinel-CoreSrv
 
 # The following lines are desirable for IPv6 capable hosts
 ::1     localhost ip6-localhost ip6-loopback
@@ -239,14 +239,14 @@ sudo systemctl enable docker
 ### 1. Create Orion Root Directory
 
 ```bash
-sudo mkdir -p /srv/orion
-sudo chown -R $USER:$USER /srv/orion
+sudo mkdir -p /srv/orion-sentinel-core
+sudo chown -R $USER:$USER /srv/orion-sentinel-core
 ```
 
 ### 2. Create Directory Structure
 
 ```bash
-cd /srv/orion
+cd /srv/orion-sentinel-core
 
 # Create main directories
 mkdir -p config data media cloud monitoring
@@ -262,13 +262,13 @@ mkdir -p cloud/{db,app,data}
 mkdir -p monitoring/{prometheus,grafana,loki}
 
 # Verify structure
-tree -L 2 /srv/orion
+tree -L 2 /srv/orion-sentinel-core
 ```
 
 Expected output:
 
 ```
-/srv/orion/
+/srv/orion-sentinel-core-sentinel-core/
 ├── cloud
 │   ├── app
 │   ├── data
@@ -291,10 +291,10 @@ Expected output:
 id
 
 # Set ownership (adjust PUID/PGID as needed)
-sudo chown -R 1000:1000 /srv/orion
+sudo chown -R 1000:1000 /srv/orion-sentinel-core
 
 # Set permissions
-chmod -R 755 /srv/orion
+chmod -R 755 /srv/orion-sentinel-core
 ```
 
 ### 4. (Optional) Mount External Storage
@@ -320,9 +320,9 @@ UUID=your-uuid-here /mnt/media-drive ext4 defaults,nofail 0 2
 # Mount
 sudo mount -a
 
-# Symlink to /srv/orion/media
-rm -rf /srv/orion/media
-ln -s /mnt/media-drive /srv/orion/media
+# Symlink to /srv/orion-sentinel-core-sentinel-core/media
+rm -rf /srv/orion-sentinel-core-sentinel-core/media
+ln -s /mnt/media-drive /srv/orion-sentinel-core-sentinel-core/media
 ```
 
 ---
@@ -331,7 +331,7 @@ ln -s /mnt/media-drive /srv/orion/media
 
 ### 1. DNS Resolution
 
-Ensure Dell is using Pi 5 #1 (Pi-hole) as primary DNS:
+Ensure CoreSrv is using Pi 5 #1 (Pi-hole) as primary DNS:
 
 ```bash
 # Check current DNS
@@ -361,7 +361,7 @@ ping -c 4 pi-netsec.local  # Adjust hostname
 Add local DNS entries to Pi-hole for service discovery:
 
 ```
-192.168.1.100   orion-dell-hub.local
+192.168.1.100   Orion-Sentinel-CoreSrv.local
 192.168.1.100   jellyfin.local
 192.168.1.100   requests.local
 192.168.1.100   qbit.local
@@ -387,8 +387,8 @@ Add local DNS entries to Pi-hole for service discovery:
 
 ```bash
 cd ~
-git clone https://github.com/yorgosroussakis/Orion-Sentinel-CoreSrv.git orion-dell-hub
-cd orion-dell-hub
+git clone https://github.com/yorgosroussakis/Orion-Sentinel-CoreSrv.git Orion-Sentinel-CoreSrv
+cd Orion-Sentinel-CoreSrv
 ```
 
 ### 2. Copy Environment Files
@@ -430,7 +430,7 @@ vim env/.env.media
 ### 1. Start Core Services First
 
 ```bash
-cd ~/orion-dell-hub
+cd ~/Orion-Sentinel-CoreSrv
 
 # Start Traefik + Authelia
 docker compose --profile core up -d
@@ -546,8 +546,8 @@ Edit `maintenance/homepage/config.yml` to add service tiles.
 
 **Permissions errors:**
 - Verify PUID/PGID in env files: `id`
-- Check directory ownership: `ls -la /srv/orion`
-- Fix ownership: `sudo chown -R 1000:1000 /srv/orion`
+- Check directory ownership: `ls -la /srv/orion-sentinel-core`
+- Fix ownership: `sudo chown -R 1000:1000 /srv/orion-sentinel-core`
 
 ---
 
