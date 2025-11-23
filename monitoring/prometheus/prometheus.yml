@@ -1,0 +1,141 @@
+# Prometheus Configuration
+# See: https://prometheus.io/docs/prometheus/latest/configuration/configuration/
+
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'orion-sentinel-core'
+    environment: 'production'
+
+# Alertmanager configuration (optional - configure later)
+# alerting:
+#   alertmanagers:
+#     - static_configs:
+#         - targets:
+#           - alertmanager:9093
+
+# Rule files (for alerts - configure later)
+# rule_files:
+#   - '/etc/prometheus/rules/*.yml'
+
+# Scrape configurations
+scrape_configs:
+  # Prometheus itself
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+        labels:
+          node: 'coresrv'
+          service: 'prometheus'
+
+  # ===========================================================================
+  # CoreSrv Targets
+  # ===========================================================================
+  
+  # CoreSrv Node Exporter (host metrics)
+  # TODO: Add node_exporter to compose.yml
+  - job_name: 'coresrv-node'
+    static_configs:
+      - targets: ['node-exporter:9100']
+        labels:
+          node: 'coresrv'
+          instance: 'coresrv'
+
+  # CoreSrv cAdvisor (container metrics)
+  # TODO: Add cadvisor to compose.yml
+  - job_name: 'coresrv-cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+        labels:
+          node: 'coresrv'
+          instance: 'coresrv'
+
+  # Traefik metrics
+  - job_name: 'traefik'
+    static_configs:
+      - targets: ['traefik:8082']
+        labels:
+          node: 'coresrv'
+          service: 'traefik'
+
+  # ===========================================================================
+  # Pi DNS Node (Pi 5 #1) - Adjust IPs as needed
+  # ===========================================================================
+  
+  # Pi DNS - Node Exporter
+  # TODO: Set up node_exporter on Pi DNS
+  - job_name: 'pi-dns-node'
+    static_configs:
+      - targets: ['192.168.1.10:9100']  # ← ADJUST IP
+        labels:
+          node: 'pi-dns'
+          instance: 'pi-dns'
+
+  # Pi DNS - Pi-hole Exporter
+  # TODO: Set up pihole_exporter on Pi DNS
+  # See: https://github.com/eko/pihole-exporter
+  - job_name: 'pihole'
+    static_configs:
+      - targets: ['192.168.1.10:9617']  # ← ADJUST IP
+        labels:
+          node: 'pi-dns'
+          service: 'pihole'
+
+  # Pi DNS - Unbound Exporter
+  # TODO: Set up unbound_exporter on Pi DNS
+  # See: https://github.com/letsencrypt/unbound_exporter
+  - job_name: 'unbound'
+    static_configs:
+      - targets: ['192.168.1.10:9167']  # ← ADJUST IP
+        labels:
+          node: 'pi-dns'
+          service: 'unbound'
+
+  # ===========================================================================
+  # Pi NetSec Node (Pi 5 #2) - Adjust IPs as needed
+  # ===========================================================================
+  
+  # Pi NetSec - Node Exporter
+  # TODO: Set up node_exporter on Pi NetSec
+  - job_name: 'pi-netsec-node'
+    static_configs:
+      - targets: ['192.168.1.20:9100']  # ← ADJUST IP
+        labels:
+          node: 'pi-netsec'
+          instance: 'pi-netsec'
+
+  # Pi NetSec - Orion Sentinel Metrics (custom)
+  # TODO: Configure Orion Sentinel to export Prometheus metrics
+  # - job_name: 'orion-sentinel'
+  #   static_configs:
+  #     - targets: ['192.168.1.20:XXXX']  # ← ADJUST IP and PORT
+  #       labels:
+  #         node: 'pi-netsec'
+  #         service: 'orion-sentinel'
+
+  # ===========================================================================
+  # Additional Exporters (optional)
+  # ===========================================================================
+  
+  # Blackbox exporter (for HTTP/ICMP probes)
+  # Useful for monitoring external endpoints
+  # - job_name: 'blackbox'
+  #   metrics_path: /probe
+  #   params:
+  #     module: [http_2xx]
+  #   static_configs:
+  #     - targets:
+  #       - https://jellyfin.local
+  #       - https://cloud.local
+  #       - https://search.local
+  #   relabel_configs:
+  #     - source_labels: [__address__]
+  #       target_label: __param_target
+  #     - source_labels: [__param_target]
+  #       target_label: instance
+  #     - target_label: __address__
+  #       replacement: blackbox-exporter:9115
+
+# Storage retention (can be overridden by command line flags)
+# Default: 15 days (configured via compose.yml environment)
