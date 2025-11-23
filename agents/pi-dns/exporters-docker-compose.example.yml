@@ -1,0 +1,148 @@
+# DNS Pi Exporters - Docker Compose Example
+# 
+# This file provides example configurations for Prometheus exporters
+# to be added to the DNS Pi stack (stacks/dns/docker-compose.yml in the rpi-ha-dns-stack repo)
+#
+# Copy these service definitions to your DNS Pi docker-compose.yml file
+# and adjust network names, volume paths, and credentials to match your actual setup.
+
+# ============================================================================
+# Pi-hole Exporter
+# ============================================================================
+# Scrapes metrics from both Pi-hole instances
+# Exposes metrics on port 9617 for CoreSrv Prometheus to scrape
+
+  pihole_exporter:
+    container_name: pihole_exporter
+    image: ekofr/pihole-exporter:latest
+    restart: unless-stopped
+    depends_on:
+      - pihole_primary
+      - pihole_secondary
+    networks:
+      - dns_net  # Use the same network as your Pi-hole containers
+    ports:
+      - "9617:9617"  # Expose for CoreSrv to scrape (can be internal only if on same Docker network)
+    environment:
+      PIHOLE_PROTOCOL: "http"
+      # Adjust these to match your actual Pi-hole container names
+      PIHOLE_HOSTNAME: "pihole_primary,pihole_secondary"
+      PIHOLE_PORT: "80"
+      # IMPORTANT: Replace with your actual Pi-hole password or API token
+      # You can find WEBPASSWORD in your Pi-hole environment or use API tokens
+      PIHOLE_PASSWORD: "${PIHOLE_WEBPASSWORD}"  # Or use PIHOLE_API_TOKEN
+      INTERVAL: "15s"
+      PORT: "9617"
+
+# ============================================================================
+# Unbound Exporter
+# ============================================================================
+# Scrapes metrics from Unbound recursive DNS resolver
+# Exposes metrics on port 9167 for CoreSrv Prometheus to scrape
+#
+# NOTE: Requires Unbound to have remote-control enabled
+# Add to your Unbound configuration:
+#   server:
+#     extended-statistics: yes
+#     statistics-cumulative: no
+#   remote-control:
+#     control-enable: yes
+#     control-interface: 0.0.0.0  # or Unix socket
+#     control-port: 8953
+
+  unbound_exporter:
+    container_name: unbound_exporter
+    image: rsprta/unbound_exporter:latest  # Or letsencrypt/unbound_exporter
+    restart: unless-stopped
+    depends_on:
+      - unbound_primary
+    networks:
+      - dns_net  # Use the same network as your Unbound containers
+    ports:
+      - "9167:9167"  # Expose for CoreSrv to scrape
+    # OPTION 1: Using TCP control port with TLS
+    # Requires Unbound to be configured with control-interface and TLS certs
+    volumes:
+      - unbound_config:/etc/unbound:ro  # Adjust to your Unbound config volume
+    command:
+      - "-unbound.host=tcp://unbound_primary:8953"
+      - "-unbound.ca=/etc/unbound/unbound_server.pem"
+      - "-unbound.cert=/etc/unbound/unbound_control.pem"
+      - "-unbound.key=/etc/unbound/unbound_control.key"
+      - "-web.listen-address=:9167"
+    
+    # OPTION 2: Using Unix socket (simpler if your Unbound uses socket)
+    # Uncomment this and comment out the volumes/command above if using socket
+    # volumes:
+    #   - unbound_run:/run  # Share socket directory with Unbound
+    # command:
+    #   - "-unbound.host=unix:///run/unbound.ctl"
+    #   - "-web.listen-address=:9167"
+
+# ============================================================================
+# Node Exporter (Optional but Recommended)
+# ============================================================================
+# Exposes host-level metrics (CPU, RAM, disk, network) for the DNS Pi
+# Exposes metrics on port 9100 for CoreSrv Prometheus to scrape
+
+  dns_node_exporter:
+    container_name: dns_node_exporter
+    image: prom/node-exporter:latest
+    restart: unless-stopped
+    # Use host network for accurate host metrics
+    network_mode: "host"
+    pid: "host"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--path.rootfs=/rootfs'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+
+# ============================================================================
+# Network Configuration
+# ============================================================================
+# Ensure your networks section includes the dns_net network:
+#
+# networks:
+#   dns_net:
+#     name: dns_net
+#     driver: bridge
+
+# ============================================================================
+# Volumes Configuration
+# ============================================================================
+# Ensure your volumes section includes necessary volumes:
+#
+# volumes:
+#   unbound_config:  # For Unbound TLS certificates
+#   unbound_run:     # For Unbound control socket (if using socket)
+
+# ============================================================================
+# Prometheus Scrape Configuration
+# ============================================================================
+# The CoreSrv Prometheus is already configured to scrape:
+#   - pihole_exporter:9617
+#   - unbound_exporter:9167
+#   - dns_node_exporter:9100 (via 192.168.8.240:9100)
+#
+# See monitoring/prometheus/prometheus.yml in CoreSrv repo
+
+# ============================================================================
+# Deployment Instructions
+# ============================================================================
+# 1. Add these service definitions to your stacks/dns/docker-compose.yml
+# 2. Update network names to match your DNS stack (likely dns_net or similar)
+# 3. Update depends_on to match your actual Pi-hole/Unbound container names
+# 4. Set PIHOLE_PASSWORD or PIHOLE_API_TOKEN
+# 5. Choose Unbound exporter connection method (TCP+TLS or Unix socket)
+# 6. Verify Unbound has remote-control enabled with extended statistics
+# 7. Deploy: docker-compose up -d
+# 8. Verify metrics endpoints:
+#    - curl http://localhost:9617/metrics  # Pi-hole
+#    - curl http://localhost:9167/metrics  # Unbound
+#    - curl http://localhost:9100/metrics  # Node
+# 9. Check CoreSrv Prometheus targets: https://prometheus.local/targets
