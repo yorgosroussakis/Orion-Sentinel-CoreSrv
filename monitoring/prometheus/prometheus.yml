@@ -14,6 +14,9 @@ scrape_configs:
     static_configs:
       - targets: ["cadvisor:8080"]
 
+  # Optional external targets (Pi nodes)
+  # These are only used when DNS Pi and NetSec Pi are deployed
+  # Prometheus will tolerate these targets being down
   - job_name: "pi-dns"
     static_configs:
       - targets:

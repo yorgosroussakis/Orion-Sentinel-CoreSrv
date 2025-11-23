@@ -1,5 +1,12 @@
+# Remote Pi Integration Routes
+# These routes proxy to external Pi nodes when deployed
+# Traefik will load this config even if the backend services are unavailable
+# If the Pis are not present, these routes will return 503 Service Unavailable
+
 http:
   routers:
+    # DNS Pi - Pi-hole and Unbound web UI
+    # Only functional when DNS Pi (192.168.8.240) is deployed
     dns:
       rule: "Host(`dns.local`)"
       entryPoints:
@@ -9,6 +16,8 @@ http:
         - secure-chain@file
       service: dns-svc
 
+    # NetSec Pi - Security monitoring and AI stack UI
+    # Only functional when NetSec Pi (192.168.8.241) is deployed
     security:
       rule: "Host(`security.local`)"
       entryPoints:

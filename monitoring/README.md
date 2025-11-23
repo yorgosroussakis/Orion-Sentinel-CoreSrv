@@ -14,6 +14,27 @@ The Orion-Sentinel-CoreSrv monitoring stack provides comprehensive observability
 
 ## Architecture
 
+### Standalone vs Integrated
+
+The monitoring stack can operate in two modes:
+
+**Standalone Mode** (CoreSrv only):
+- Monitors only the CoreSrv Dell mini-PC and its services
+- Prometheus scrapes local node_exporter and cAdvisor
+- Loki aggregates logs from CoreSrv Docker containers
+- Pi scrape targets will show as "down" in Prometheus (expected)
+- Traefik routes `dns.local` and `security.local` will return 503 (expected)
+- Fully functional for CoreSrv services monitoring
+
+**Integrated Mode** (CoreSrv + Pi nodes):
+- Monitors CoreSrv plus external DNS Pi and NetSec Pi
+- Prometheus scrapes Pi exporters (pihole_exporter, unbound_exporter, node_exporter)
+- Loki receives logs from Pi Promtail agents
+- Traefik provides reverse proxy access to Pi UIs
+- Complete home lab observability from single pane of glass
+
+See `docs/TOPOLOGY.md` for detailed deployment modes and architecture diagrams.
+
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │                    Orion-Sentinel-CoreSrv                    │
@@ -37,6 +58,7 @@ The Orion-Sentinel-CoreSrv monitoring stack provides comprehensive observability
                               ▲
                               │
         ┌─────────────────────┴─────────────────────┐
+        │         (Optional - Integrated Mode)       │
         │                                           │
 ┌───────▼────────┐                         ┌────────▼───────┐
 │   DNS Pi       │                         │  NetSec Pi     │
