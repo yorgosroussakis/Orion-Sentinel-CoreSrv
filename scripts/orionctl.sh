@@ -223,11 +223,11 @@ case "$CMD" in
         info "Validating configuration..."
         
         # Check env files
-        local missing=0
+        MISSING=0
         for env_file in core; do
             if [ ! -f "env/.env.$env_file" ]; then
                 error "Missing env/.env.$env_file"
-                ((missing++))
+                ((MISSING++))
             else
                 success "Found env/.env.$env_file"
             fi
@@ -251,15 +251,15 @@ case "$CMD" in
         
         # Check directories
         if [ -f "env/.env.core" ]; then
-            local config_root=$(grep CONFIG_ROOT env/.env.core | cut -d'=' -f2)
-            if [ -d "$config_root" ]; then
-                success "Config directory exists: $config_root"
+            CONFIG_ROOT=$(grep CONFIG_ROOT env/.env.core | cut -d'=' -f2)
+            if [ -d "$CONFIG_ROOT" ]; then
+                success "Config directory exists: $CONFIG_ROOT"
             else
-                warn "Config directory not found: $config_root"
+                warn "Config directory not found: $CONFIG_ROOT"
             fi
         fi
         
-        [ $missing -eq 0 ] && success "Validation complete!" || warn "Please fix issues above"
+        [ $MISSING -eq 0 ] && success "Validation complete!" || warn "Please fix issues above"
         ;;
     
     # =========================================================================

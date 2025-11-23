@@ -1,6 +1,10 @@
 # CoreSrv Setup Guide
 
-This guide walks through setting up the CoreSrv as the Orion home lab services hub.
+This guide walks through detailed setup instructions for the CoreSrv as the Orion home lab services hub.
+
+> **🚀 Quick Start:** For a simplified 5-step installation process, see [INSTALL.md](../INSTALL.md) or run `./scripts/setup.sh`
+
+This document provides comprehensive, step-by-step instructions for manual installation and detailed configuration.
 
 ## Table of Contents
 
@@ -236,6 +240,8 @@ sudo systemctl enable docker
 
 ## Directory Structure Setup
 
+> **💡 Automated Option:** The `./scripts/setup.sh` script can create this directory structure automatically.
+
 ### 1. Create Orion Root Directory
 
 ```bash
@@ -393,6 +399,10 @@ cd Orion-Sentinel-CoreSrv
 
 ### 2. Copy Environment Files
 
+> **💡 Automated Option:** The `./scripts/setup.sh` script can copy and configure all environment files automatically, including generating secure secrets.
+
+**Manual method:**
+
 ```bash
 # Copy all example env files
 cp env/.env.core.example env/.env.core
@@ -418,7 +428,7 @@ vim env/.env.media
 
 - `PUID` / `PGID` - Your user ID (run `id`)
 - `TZ` - Your timezone (e.g., `Europe/Amsterdam`)
-- All `*_PASSWORD` and `*_SECRET` variables
+- All `*_PASSWORD` and `*_SECRET` variables (generate with `openssl rand -hex 32`)
 - `DOMAIN` - Your domain (or keep `local` for LAN-only)
 - VPN credentials in `.env.media`
 - ACME email in `.env.core`
