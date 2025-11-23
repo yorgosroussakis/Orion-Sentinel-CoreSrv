@@ -6,6 +6,7 @@ set -euo pipefail
 
 # Default configuration
 DEFAULT_BASE_DIR="/srv/orion-sentinel-core"
+SELECTED_BASE_DIR=""  # Will be set during directory creation
 
 # Color output
 RED='\033[0;31m'
@@ -183,8 +184,8 @@ create_directories() {
     
     echo ""
     
-    # Save base dir for later use
-    echo "$base_dir" > /tmp/orion_base_dir
+    # Save base dir globally for later use
+    SELECTED_BASE_DIR="$base_dir"
 }
 
 # Setup environment files
@@ -199,7 +200,7 @@ setup_env_files() {
     # Get user preferences
     local tz=$(prompt "Enter your timezone" "Europe/Amsterdam")
     local domain=$(prompt "Enter your domain (use 'local' for LAN-only)" "local")
-    local base_dir=$(cat /tmp/orion_base_dir 2>/dev/null || echo "/srv/orion-sentinel-core")
+    local base_dir="${SELECTED_BASE_DIR:-$DEFAULT_BASE_DIR}"
     
     # Copy and configure core env file
     if [ ! -f "env/.env.core" ]; then
@@ -337,7 +338,7 @@ validate_config() {
     fi
     
     # Check directory exists
-    local base_dir=$(cat /tmp/orion_base_dir 2>/dev/null || echo "/srv/orion-sentinel-core")
+    local base_dir="${SELECTED_BASE_DIR:-$DEFAULT_BASE_DIR}"
     if [ -d "$base_dir" ]; then
         success "Base directory exists: $base_dir"
     else
