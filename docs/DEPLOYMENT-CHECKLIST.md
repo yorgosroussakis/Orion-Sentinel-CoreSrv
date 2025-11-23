@@ -248,11 +248,11 @@ Use this checklist for deploying Orion-Sentinel-CoreSrv in production.
 
 ## Phase 2: Monitoring
 
-### Start Monitoring Stack
+### Start Observability Stack
 
-- [ ] **Start monitoring profile:**
+- [ ] **Start observability profile:**
   ```bash
-  ./scripts/orionctl.sh up-monitoring
+  ./scripts/orionctl.sh up-observability
   ```
 
 - [ ] **Check logs:**

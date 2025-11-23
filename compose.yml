@@ -11,7 +11,7 @@ services:
   ############################
 
   traefik:
-    image: traefik:v3.0
+    image: traefik:latest
     container_name: traefik
     profiles: ["core"]
     restart: unless-stopped
@@ -41,7 +41,7 @@ services:
       - "traefik.http.services.traefik.loadbalancer.server.port=8080"
 
   authelia:
-    image: authelia/authelia:4.38.6
+    image: authelia/authelia:latest
     container_name: authelia
     profiles: ["core"]
     restart: unless-stopped
@@ -56,6 +56,8 @@ services:
     networks:
       - orion_proxy
       - orion_internal
+    depends_on:
+      - redis
     security_opt:
       - no-new-privileges:true
     healthcheck:
@@ -74,6 +76,24 @@ services:
       - "traefik.http.services.authelia.loadbalancer.server.port=9091"
       # Autoheal label
       - "autoheal=true"
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    profiles: ["core"]
+    restart: unless-stopped
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - ${CONFIG_ROOT}/redis:/data
+    networks:
+      - orion_internal
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
 
   ############################################
   # MEDIA-CORE: media apps + qBit + VPN
@@ -128,7 +148,7 @@ services:
       - "traefik.http.routers.qbittorrent.rule=Host(`qbit.local`)"
       - "traefik.http.routers.qbittorrent.entrypoints=websecure"
       - "traefik.http.routers.qbittorrent.tls=true"
-      - "traefik.http.routers.qbittorrent.middlewares=authelia-forwardauth@file"
+      - "traefik.http.routers.qbittorrent.middlewares=secure-chain@file"
       - "traefik.http.services.qbittorrent.loadbalancer.server.port=8080"
       # Autoheal label
       - "autoheal=true"
@@ -198,7 +218,7 @@ services:
       - "traefik.http.routers.sonarr.rule=Host(`sonarr.local`)"
       - "traefik.http.routers.sonarr.entrypoints=websecure"
       - "traefik.http.routers.sonarr.tls=true"
-      - "traefik.http.routers.sonarr.middlewares=authelia-forwardauth@file"
+      - "traefik.http.routers.sonarr.middlewares=secure-chain@file"
       - "traefik.http.services.sonarr.loadbalancer.server.port=8989"
 
   radarr:
@@ -222,7 +242,7 @@ services:
       - "traefik.http.routers.radarr.rule=Host(`radarr.local`)"
       - "traefik.http.routers.radarr.entrypoints=websecure"
       - "traefik.http.routers.radarr.tls=true"
-      - "traefik.http.routers.radarr.middlewares=authelia-forwardauth@file"
+      - "traefik.http.routers.radarr.middlewares=secure-chain@file"
       - "traefik.http.services.radarr.loadbalancer.server.port=7878"
 
   bazarr:
@@ -245,7 +265,7 @@ services:
       - "traefik.http.routers.bazarr.rule=Host(`bazarr.local`)"
       - "traefik.http.routers.bazarr.entrypoints=websecure"
       - "traefik.http.routers.bazarr.tls=true"
-      - "traefik.http.routers.bazarr.middlewares=authelia-forwardauth@file"
+      - "traefik.http.routers.bazarr.middlewares=secure-chain@file"
       - "traefik.http.services.bazarr.loadbalancer.server.port=6767"
 
   prowlarr:
@@ -267,7 +287,7 @@ services:
       - "traefik.http.routers.prowlarr.rule=Host(`${PROWLARR_HOST:-prowlarr.local}`)"
       - "traefik.http.routers.prowlarr.entrypoints=websecure"
       - "traefik.http.routers.prowlarr.tls=true"
-      - "traefik.http.routers.prowlarr.middlewares=authelia-forwardauth@file"
+      - "traefik.http.routers.prowlarr.middlewares=secure-chain@file"
       - "traefik.http.services.prowlarr.loadbalancer.server.port=9696"
 
   jellyseerr:
@@ -287,7 +307,7 @@ services:
       - "traefik.http.routers.jellyseerr.rule=Host(`${JELLYSEERR_HOST:-requests.local}`)"
       - "traefik.http.routers.jellyseerr.entrypoints=websecure"
       - "traefik.http.routers.jellyseerr.tls=true"
-      - "traefik.http.routers.jellyseerr.middlewares=authelia-forwardauth@file"
+      - "traefik.http.routers.jellyseerr.middlewares=secure-chain@file"
       - "traefik.http.services.jellyseerr.loadbalancer.server.port=5055"
 
   ##########################################
@@ -320,7 +340,7 @@ services:
       - "traefik.http.routers.recommendarr.rule=Host(`${RECOMMENDARR_HOST:-recommend.local}`)"
       - "traefik.http.routers.recommendarr.entrypoints=websecure"
       - "traefik.http.routers.recommendarr.tls=true"
-      - "traefik.http.routers.recommendarr.middlewares=authelia-forwardauth@file"
+      - "traefik.http.routers.recommendarr.middlewares=secure-chain@file"
       - "traefik.http.services.recommendarr.loadbalancer.server.port=8000"
 
   ##########################################
@@ -345,7 +365,7 @@ services:
       - "traefik.http.routers.homepage.rule=Host(`home.local`)"
       - "traefik.http.routers.homepage.entrypoints=websecure"
       - "traefik.http.routers.homepage.tls=true"
-      - "traefik.http.routers.homepage.middlewares=authelia-forwardauth@file"
+      - "traefik.http.routers.homepage.middlewares=secure-chain@file"
       - "traefik.http.services.homepage.loadbalancer.server.port=3000"
 
   watchtower:
@@ -377,10 +397,11 @@ services:
 
   # Node Exporter - Host metrics (CPU, RAM, disk, network)
   node-exporter:
-    image: prom/node-exporter:v1.7.0
+    image: prom/node-exporter:v1.8.1
     container_name: node-exporter
     profiles: ["monitoring"]
     restart: unless-stopped
+    network_mode: host
     command:
       - '--path.rootfs=/host'
       - '--path.procfs=/host/proc'
@@ -390,8 +411,6 @@ services:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
       - /:/host:ro,rslave
-    networks:
-      - orion_monitoring
     # Security: read-only root filesystem, drop all capabilities
     read_only: true
     security_opt:
@@ -401,7 +420,7 @@ services:
 
   # cAdvisor - Container metrics
   cadvisor:
-    image: gcr.io/cadvisor/cadvisor:v0.47.2
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
     container_name: cadvisor
     profiles: ["monitoring"]
     restart: unless-stopped
@@ -423,7 +442,7 @@ services:
 
   # Prometheus - Metrics collection and storage
   prometheus:
-    image: prom/prometheus:v2.48.1
+    image: prom/prometheus:v2.54.0
     container_name: prometheus
     profiles: ["monitoring"]
     restart: unless-stopped
@@ -447,7 +466,7 @@ services:
       - "traefik.http.routers.prometheus.rule=Host(`prometheus.local`)"
       - "traefik.http.routers.prometheus.entrypoints=websecure"
       - "traefik.http.routers.prometheus.tls=true"
-      - "traefik.http.routers.prometheus.middlewares=authelia-forwardauth@file"
+      - "traefik.http.routers.prometheus.middlewares=secure-chain@file"
       - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
 
   # Loki - Log aggregation
@@ -485,7 +504,7 @@ services:
 
   # Grafana - Visualization and dashboards
   grafana:
-    image: grafana/grafana:10.3.1
+    image: grafana/grafana:11.0.0
     container_name: grafana
     profiles: ["monitoring"]
     restart: unless-stopped
@@ -508,7 +527,7 @@ services:
       - "traefik.http.routers.grafana.rule=Host(`grafana.local`)"
       - "traefik.http.routers.grafana.entrypoints=websecure"
       - "traefik.http.routers.grafana.tls=true"
-      - "traefik.http.routers.grafana.middlewares=authelia-forwardauth@file"
+      - "traefik.http.routers.grafana.middlewares=secure-chain@file"
       - "traefik.http.services.grafana.loadbalancer.server.port=3000"
 
   # Uptime Kuma - Uptime monitoring and status page
@@ -529,7 +548,7 @@ services:
       - "traefik.http.routers.uptime-kuma.rule=Host(`status.local`)"
       - "traefik.http.routers.uptime-kuma.entrypoints=websecure"
       - "traefik.http.routers.uptime-kuma.tls=true"
-      - "traefik.http.routers.uptime-kuma.middlewares=authelia-forwardauth@file"
+      - "traefik.http.routers.uptime-kuma.middlewares=secure-chain@file"
       - "traefik.http.services.uptime-kuma.loadbalancer.server.port=3001"
 
   ##########################################
@@ -592,7 +611,7 @@ services:
       - "traefik.http.routers.nextcloud.rule=Host(`cloud.local`)"
       - "traefik.http.routers.nextcloud.entrypoints=websecure"
       - "traefik.http.routers.nextcloud.tls=true"
-      - "traefik.http.routers.nextcloud.middlewares=authelia-forwardauth@file,nextcloud-redirect@file"
+      - "traefik.http.routers.nextcloud.middlewares=secure-chain@file,nextcloud-redirect@file"
       - "traefik.http.services.nextcloud.loadbalancer.server.port=80"
       # Nextcloud-specific middleware for WebDAV/.well-known redirects
       - "traefik.http.middlewares.nextcloud-redirect.redirectregex.regex=^https://([^/]+)/.well-known/(card|cal)dav"
@@ -629,7 +648,7 @@ services:
       - "traefik.http.routers.searxng.entrypoints=websecure"
       - "traefik.http.routers.searxng.tls=true"
       # Optionally protect with Authelia (comment out for LAN-only open access)
-      - "traefik.http.routers.searxng.middlewares=authelia-forwardauth@file"
+      - "traefik.http.routers.searxng.middlewares=secure-chain@file"
       - "traefik.http.services.searxng.loadbalancer.server.port=8080"
 
   ##########################################

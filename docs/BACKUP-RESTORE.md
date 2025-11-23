@@ -232,8 +232,8 @@ ls -la env/.env.*
 curl -k https://auth.local
 curl -k https://traefik.local
 
-# Start monitoring
-./scripts/orionctl.sh up-monitoring
+# Start observability stack
+./scripts/orionctl.sh up-observability
 
 # Verify Grafana
 curl http://localhost:3000/api/health
