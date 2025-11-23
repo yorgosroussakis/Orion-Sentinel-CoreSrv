@@ -88,7 +88,7 @@ media/
 
 **Hardware Acceleration (Intel):**
 - The Jellyfin service is configured with Intel hardware acceleration support
-- Uses `/dev/dri` device for GPU access (Intel i5 and other Intel CPUs with integrated GPU)
+- Uses `/dev/dri` device for GPU access (Intel CPUs with integrated graphics)
 - Requires `video` and `render` group membership for container access
 - To enable in Jellyfin:
   1. Navigate to Dashboard → Playback → Transcoding
