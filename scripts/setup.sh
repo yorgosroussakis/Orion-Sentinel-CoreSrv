@@ -259,7 +259,7 @@ setup_env_files() {
             
             # Generate Grafana password
             local grafana_pass=$(openssl rand -base64 16)
-            sed -i "s|GRAFANA_ADMIN_PASSWORD=changeme|GRAFANA_ADMIN_PASSWORD=$grafana_pass|g" env/.env.monitoring
+            sed -i "s|GRAFANA_ADMIN_PASSWORD=change_me_to_a_strong_password|GRAFANA_ADMIN_PASSWORD=$grafana_pass|g" env/.env.monitoring
             success "Created env/.env.monitoring (Grafana password: $grafana_pass)"
         else
             warn "env/.env.monitoring already exists, skipping"
@@ -279,8 +279,8 @@ setup_env_files() {
             # Generate passwords
             local nc_pass=$(openssl rand -base64 16)
             local db_pass=$(openssl rand -base64 16)
-            sed -i "s|NEXTCLOUD_ADMIN_PASSWORD=changeme|NEXTCLOUD_ADMIN_PASSWORD=$nc_pass|g" env/.env.cloud
-            sed -i "s|POSTGRES_PASSWORD=changeme|POSTGRES_PASSWORD=$db_pass|g" env/.env.cloud
+            sed -i "s|NEXTCLOUD_ADMIN_PASSWORD=change_me_to_a_strong_password|NEXTCLOUD_ADMIN_PASSWORD=$nc_pass|g" env/.env.cloud
+            sed -i "s|NEXTCLOUD_DB_PASSWORD=change_me_to_a_strong_database_password|NEXTCLOUD_DB_PASSWORD=$db_pass|g" env/.env.cloud
             success "Created env/.env.cloud"
             info "Nextcloud admin password: $nc_pass"
         else
@@ -301,7 +301,7 @@ setup_env_files() {
             # Generate SearXNG secret
             if [ "$env_file" = "search" ]; then
                 local searx_secret=$(openssl rand -hex 32)
-                sed -i "s|SEARXNG_SECRET_KEY=change-me-run-openssl-rand-hex-32|SEARXNG_SECRET_KEY=$searx_secret|g" "env/.env.$env_file"
+                sed -i "s|SEARXNG_SECRET_KEY=change_me_to_a_random_hex_string_use_openssl_rand_hex_32|SEARXNG_SECRET_KEY=$searx_secret|g" "env/.env.$env_file"
             fi
             
             success "Created env/.env.$env_file"
