@@ -319,12 +319,10 @@ validate_config() {
     local issues=0
     
     # Check env files exist
-    for env_file in core; do
-        if [ ! -f "env/.env.$env_file" ]; then
-            error "Missing env/.env.$env_file"
-            ((issues++))
-        fi
-    done
+    if [ ! -f "env/.env.core" ]; then
+        error "Missing env/.env.core"
+        ((issues++))
+    fi
     
     # Check for placeholder secrets in core env
     if [ -f "env/.env.core" ]; then
