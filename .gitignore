@@ -7,7 +7,9 @@
 # Never commit actual .env files - only commit .env.*.example templates
 *.env
 .env
-env/*.env
+# Exclude all .env.* files in env/ directory (e.g., .env.core, .env.media)
+env/.env.*
+# But allow .env.*.example templates to be committed
 !env/.env.*.example
 
 # =============================================================================
