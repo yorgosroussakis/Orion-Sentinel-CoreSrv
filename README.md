@@ -11,7 +11,7 @@ Orion-Sentinel-CoreSrv is the central services hub in a 3-node home lab architec
 - **Cloud:** Nextcloud + PostgreSQL
 - **Monitoring:** Prometheus + Grafana + Loki + Promtail + Uptime Kuma
 - **Search:** SearXNG (privacy-respecting metasearch)
-- **Home Automation:** Home Assistant
+- **Home Automation:** Home Assistant + Zigbee2MQTT + Mosquitto MQTT + Mealie + DSMR Reader
 - **Maintenance:** Homepage dashboard + Watchtower + Autoheal
 
 ## Architecture
@@ -91,6 +91,8 @@ All services are accessible via HTTPS with Authelia SSO:
 - **Grafana:** https://grafana.local
 - **Nextcloud:** https://cloud.local
 - **SearXNG:** https://search.local
+- **Home Assistant:** https://ha.local
+- **Mealie (Recipes):** https://mealie.local
 
 **📖 For detailed installation instructions, see [INSTALL.md](INSTALL.md)**
 
@@ -109,7 +111,7 @@ All services are accessible via HTTPS with Authelia SSO:
 - [Monitoring Stack](monitoring/README.md) - Prometheus + Grafana + Loki
 - [Cloud Stack](cloud/README.md) - Nextcloud
 - [Search](search/README.md) - SearXNG
-- [Home Automation](home-automation/README.md) - Home Assistant
+- [Home Automation](home-automation/README.md) - Home Assistant + Zigbee2MQTT + MQTT + Mealie + DSMR Reader
 - [Maintenance](maintenance/README.md) - Homepage + automation tools
 
 ## Profiles
@@ -122,7 +124,7 @@ Services are organized into Docker Compose profiles:
 - **`cloud`** - Nextcloud + PostgreSQL
 - **`search`** - SearXNG
 - **`monitoring`** - Prometheus + Grafana + Loki + Uptime Kuma
-- **`home-automation`** - Home Assistant
+- **`home-automation`** - Home Assistant + Zigbee2MQTT + Mosquitto + Mealie + DSMR Reader
 - **`maintenance`** - Homepage + Watchtower + Autoheal
 
 Start specific profiles:
@@ -167,4 +169,4 @@ MIT License - See [LICENSE](LICENSE)
 ---
 
 **Maintained By:** Orion Home Lab Team  
-**Last Updated:** 2025-11-23
+**Last Updated:** 2025-12-07

@@ -1,0 +1,120 @@
+---
+# Homepage Widgets Configuration
+# System information and resource widgets
+# See: https://gethomepage.dev/latest/configs/widgets/
+
+# ===========================================================================
+# SEARCH BAR
+# ===========================================================================
+- search:
+    provider: google
+    target: _blank
+    showSearchSuggestions: true
+
+# ===========================================================================
+# RESOURCES (System Stats)
+# ===========================================================================
+- resources:
+    cpu: true
+    memory: true
+    disk: /
+    cputemp: true
+    uptime: true
+    units: metric
+    refresh: 3000
+
+# ===========================================================================
+# DATETIME
+# ===========================================================================
+- datetime:
+    text_size: xl
+    format:
+      dateStyle: long
+      timeStyle: short
+      hourCycle: h23
+
+# ===========================================================================
+# WEATHER (Optional - requires API key)
+# ===========================================================================
+# Uncomment and configure after getting API key from OpenWeatherMap
+# - openweathermap:
+#     label: Amsterdam
+#     latitude: 52.3676
+#     longitude: 4.9041
+#     units: metric
+#     apiKey: $HOMEPAGE_VAR_OPENWEATHER_API_KEY
+#     cache: 5
+
+# Alternative: WeatherAPI
+# - weatherapi:
+#     label: Amsterdam
+#     latitude: 52.3676
+#     longitude: 4.9041
+#     units: metric
+#     apiKey: $HOMEPAGE_VAR_WEATHERAPI_KEY
+#     cache: 5
+
+# ===========================================================================
+# CUSTOM API WIDGETS (Optional)
+# ===========================================================================
+# Example: Show DSMR current power consumption
+# - customapi:
+#     url: http://dsmr:80/api/v2/consumption/electricity/live
+#     refreshInterval: 5000
+#     method: GET
+#     headers:
+#       X-AUTHKEY: $HOMEPAGE_VAR_DSMR_API_KEY
+#     display: Power Usage
+#     mappings:
+#       - field: currently_delivered
+#         label: Current Usage
+#         format: number
+#         suffix: W
+
+# ===========================================================================
+# GLANCES (Optional - requires Glances container)
+# ===========================================================================
+# Add Glances for detailed system monitoring
+# - glances:
+#     url: http://glances:61208
+#     metric: cpu
+#     chart: true
+
+# ===========================================================================
+# LOGO (Optional)
+# ===========================================================================
+# - logo:
+#     icon: https://raw.githubusercontent.com/walkxcode/dashboard-icons/main/png/orion.png
+
+# ===========================================================================
+# NOTES FOR CONFIGURATION
+# ===========================================================================
+# 
+# Weather API Setup:
+# 
+# 1. OpenWeatherMap (Free tier):
+#    - Sign up: https://openweathermap.org/api
+#    - Get API key
+#    - Add to compose.yml: HOMEPAGE_VAR_OPENWEATHER_API_KEY
+# 
+# 2. WeatherAPI (Free tier):
+#    - Sign up: https://www.weatherapi.com/
+#    - Get API key
+#    - Add to compose.yml: HOMEPAGE_VAR_WEATHERAPI_KEY
+# 
+# 3. Update latitude/longitude for your location
+# 
+# Custom Widgets:
+# 
+# - Use customapi widget to display data from any API
+# - Great for showing Home Assistant sensors, DSMR data, etc.
+# - Requires API endpoint that returns JSON
+# 
+# System Resource Monitoring:
+# 
+# - CPU usage percentage
+# - Memory usage (used/total)
+# - Disk usage for specified mount point
+# - CPU temperature (if available)
+# - System uptime
+# - Auto-refreshes every 3 seconds (configurable)

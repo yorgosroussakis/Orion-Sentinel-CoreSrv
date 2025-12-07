@@ -1,0 +1,108 @@
+---
+# Homepage Bookmarks Configuration
+# Quick access links organized by category
+# See: https://gethomepage.dev/latest/configs/bookmarks/
+
+# ===========================================================================
+# QUICK ACCESS
+# ===========================================================================
+- Quick Access:
+    - Home Assistant:
+        - icon: home-assistant.png
+          href: https://ha.local
+          description: Smart home control
+
+    - Grafana:
+        - icon: grafana.png
+          href: https://grafana.local
+          description: Metrics & dashboards
+
+    - Jellyfin:
+        - icon: jellyfin.png
+          href: https://jellyfin.local
+          description: Media streaming
+
+    - Mealie:
+        - icon: mealie.png
+          href: https://mealie.local
+          description: Recipe planning
+
+# ===========================================================================
+# DOCUMENTATION
+# ===========================================================================
+- Documentation:
+    - Home Assistant Docs:
+        - icon: home-assistant.png
+          href: https://www.home-assistant.io/docs/
+          description: Official HA documentation
+
+    - Zigbee2MQTT Docs:
+        - icon: zigbee2mqtt.png
+          href: https://www.zigbee2mqtt.io/
+          description: Zigbee integration guide
+
+    - Mealie Docs:
+        - icon: mealie.png
+          href: https://docs.mealie.io/
+          description: Recipe manager docs
+
+    - Orion CoreSrv GitHub:
+        - icon: github.png
+          href: https://github.com/orionsentinel/Orion-Sentinel-CoreSrv
+          description: This repository
+
+# ===========================================================================
+# COMMUNITY
+# ===========================================================================
+- Community:
+    - Home Assistant Community:
+        - icon: home-assistant.png
+          href: https://community.home-assistant.io/
+          description: HA forums
+
+    - r/homeassistant:
+        - icon: reddit.png
+          href: https://reddit.com/r/homeassistant
+          description: Reddit community
+
+    - Self-Hosted:
+        - icon: reddit.png
+          href: https://reddit.com/r/selfhosted
+          description: Self-hosting community
+
+# ===========================================================================
+# TOOLS
+# ===========================================================================
+- Tools:
+    - Zigbee Device Database:
+        - icon: zigbee2mqtt.png
+          href: https://www.zigbee2mqtt.io/supported-devices/
+          description: Supported Zigbee devices
+
+    - Home Assistant Integrations:
+        - icon: home-assistant.png
+          href: https://www.home-assistant.io/integrations/
+          description: Browse integrations
+
+    - HACS:
+        - icon: home-assistant.png
+          href: https://hacs.xyz/
+          description: Community store
+
+# ===========================================================================
+# UTILITIES
+# ===========================================================================
+- Utilities:
+    - OpenWeatherMap:
+        - icon: openweathermap.png
+          href: https://openweathermap.org/
+          description: Weather data
+
+    - Recipe Sites:
+        - icon: si-allrecipes
+          href: https://www.allrecipes.com/
+          description: Recipe inspiration
+
+    - Energy Dashboard:
+        - href: https://energy.local
+          description: Smart meter stats
