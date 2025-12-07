@@ -1,0 +1,246 @@
+---
+# Homepage Services Configuration
+# Define all service cards and widgets
+# See: https://gethomepage.dev/latest/configs/services/
+
+# ===========================================================================
+# MEDIA STACK
+# ===========================================================================
+- Media:
+    - Jellyfin:
+        icon: jellyfin.png
+        href: https://jellyfin.local
+        description: Media streaming server
+        container: jellyfin
+        widget:
+          type: jellyfin
+          url: https://jellyfin.local
+          key: $HOMEPAGE_VAR_JELLYFIN_API_KEY
+          enableBlocks: true
+          enableNowPlaying: true
+
+    - Jellyseerr:
+        icon: jellyseerr.png
+        href: https://requests.local
+        description: Request management
+        container: jellyseerr
+        widget:
+          type: jellyseerr
+          url: https://requests.local
+          key: $HOMEPAGE_VAR_JELLYSEERR_API_KEY
+
+    - Recommendarr:
+        icon: recommendarr.png
+        href: https://recommend.local
+        description: AI recommendations
+        container: recommendarr
+
+# ===========================================================================
+# DOWNLOADS
+# ===========================================================================
+- Downloads:
+    - qBittorrent:
+        icon: qbittorrent.png
+        href: https://qbit.local
+        description: Torrent client (via VPN)
+        container: qbittorrent
+        widget:
+          type: qbittorrent
+          url: http://vpn:8080
+          username: $HOMEPAGE_VAR_QBIT_USER
+          password: $HOMEPAGE_VAR_QBIT_PASSWORD
+
+    - Prowlarr:
+        icon: prowlarr.png
+        href: https://prowlarr.local
+        description: Indexer manager
+        container: prowlarr
+        widget:
+          type: prowlarr
+          url: https://prowlarr.local
+          key: $HOMEPAGE_VAR_PROWLARR_API_KEY
+
+- Content Management:
+    - Sonarr:
+        icon: sonarr.png
+        href: https://sonarr.local
+        description: TV show management
+        container: sonarr
+        widget:
+          type: sonarr
+          url: https://sonarr.local
+          key: $HOMEPAGE_VAR_SONARR_API_KEY
+          enableQueue: true
+
+    - Radarr:
+        icon: radarr.png
+        href: https://radarr.local
+        description: Movie management
+        container: radarr
+        widget:
+          type: radarr
+          url: https://radarr.local
+          key: $HOMEPAGE_VAR_RADARR_API_KEY
+          enableQueue: true
+
+    - Bazarr:
+        icon: bazarr.png
+        href: https://bazarr.local
+        description: Subtitle management
+        container: bazarr
+        widget:
+          type: bazarr
+          url: https://bazarr.local
+          key: $HOMEPAGE_VAR_BAZARR_API_KEY
+
+# ===========================================================================
+# CLOUD & SEARCH
+# ===========================================================================
+- Cloud & Search:
+    - Nextcloud:
+        icon: nextcloud.png
+        href: https://cloud.local
+        description: Private cloud storage
+        container: nextcloud
+
+    - SearXNG:
+        icon: searxng.png
+        href: https://search.local
+        description: Privacy-respecting search
+        container: searxng
+
+# ===========================================================================
+# HOME AUTOMATION
+# ===========================================================================
+- Home Automation:
+    - Home Assistant:
+        icon: home-assistant.png
+        href: https://ha.local
+        description: Smart home hub
+        container: homeassistant
+        widget:
+          type: homeassistant
+          url: https://ha.local
+          key: $HOMEPAGE_VAR_HOMEASSISTANT_TOKEN
+
+    - Zigbee2MQTT:
+        icon: zigbee2mqtt.png
+        href: https://zigbee.local
+        description: Zigbee gateway
+        container: zigbee2mqtt
+
+    - Mealie:
+        icon: mealie.png
+        href: https://mealie.local
+        description: Recipe manager
+        container: mealie
+
+    - DSMR Reader:
+        icon: dsmr-reader.png
+        href: https://energy.local
+        description: Energy monitoring
+        container: dsmr
+
+# ===========================================================================
+# MONITORING
+# ===========================================================================
+- Monitoring:
+    - Grafana:
+        icon: grafana.png
+        href: https://grafana.local
+        description: Metrics dashboards
+        container: grafana
+        widget:
+          type: grafana
+          url: https://grafana.local
+          username: $HOMEPAGE_VAR_GRAFANA_USER
+          password: $HOMEPAGE_VAR_GRAFANA_PASSWORD
+
+    - Prometheus:
+        icon: prometheus.png
+        href: https://prometheus.local
+        description: Metrics collection
+        container: prometheus
+        widget:
+          type: prometheus
+          url: https://prometheus.local
+
+    - Uptime Kuma:
+        icon: uptime-kuma.png
+        href: https://status.local
+        description: Uptime monitoring
+        container: uptime-kuma
+        widget:
+          type: uptimekuma
+          url: https://status.local
+          slug: public
+
+# ===========================================================================
+# INFRASTRUCTURE
+# ===========================================================================
+- Infrastructure:
+    - Traefik:
+        icon: traefik.png
+        href: https://traefik.local
+        description: Reverse proxy
+        container: traefik
+        widget:
+          type: traefik
+          url: https://traefik.local
+
+    - Authelia:
+        icon: authelia.png
+        href: https://auth.local
+        description: SSO authentication
+        container: authelia
+
+    - Watchtower:
+        icon: watchtower.png
+        description: Auto container updates
+        container: watchtower
+
+# ===========================================================================
+# PI NODES (Optional - Remote Monitoring)
+# ===========================================================================
+- Pi Nodes:
+    - Pi DNS:
+        icon: pi-hole.png
+        href: http://192.168.8.240
+        description: DNS server + Pi-hole
+        ping: 192.168.8.240
+
+    - Pi NetSec:
+        icon: raspberry-pi.png
+        href: http://192.168.8.241
+        description: Security monitoring
+        ping: 192.168.8.241
+
+# ===========================================================================
+# NOTES FOR CONFIGURATION
+# ===========================================================================
+# 
+# Widget Configuration:
+# 
+# 1. Most widgets require API keys. Set these as environment variables in compose.yml:
+#    - HOMEPAGE_VAR_JELLYFIN_API_KEY
+#    - HOMEPAGE_VAR_JELLYSEERR_API_KEY
+#    - HOMEPAGE_VAR_SONARR_API_KEY
+#    - HOMEPAGE_VAR_RADARR_API_KEY
+#    - HOMEPAGE_VAR_PROWLARR_API_KEY
+#    - HOMEPAGE_VAR_BAZARR_API_KEY
+#    - HOMEPAGE_VAR_HOMEASSISTANT_TOKEN
+#    - HOMEPAGE_VAR_GRAFANA_USER
+#    - HOMEPAGE_VAR_GRAFANA_PASSWORD
+#    - HOMEPAGE_VAR_QBIT_USER
+#    - HOMEPAGE_VAR_QBIT_PASSWORD
+# 
+# 2. Generate API keys from each service:
+#    - Jellyfin: Dashboard → API Keys
+#    - *arr apps: Settings → General → API Key
+#    - Home Assistant: Profile → Long-Lived Access Tokens
+# 
+# 3. For services without widgets, basic status is shown via container monitoring
+# 
+# 4. Icons are auto-loaded from walkxcode/dashboard-icons repository
+# 
+# 5. To disable a widget, remove the 'widget:' section but keep the service
