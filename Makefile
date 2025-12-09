@@ -151,7 +151,8 @@ up-extras: ## Start additional services (Homepage, Watchtower, etc.)
 	@echo "🔧 Starting additional services..."
 	@echo "⚠️  Extras compose not yet implemented"
 
-up-full: ## Start ALL services (media + gateway + monitoring + home automation)
+up-full: up-all ## Start ALL services (media + gateway + monitoring + home automation)
+up-all: ## Alias for up-full (standardized command)
 	@echo "🚀 Starting full stack..."
 	@$(MAKE) up-media
 	@$(MAKE) up-gateway
@@ -248,7 +249,9 @@ pull: ## Pull latest images
 
 backup: ## Run backup script
 	@echo "💾 Running backup..."
-	@if [ -f scripts/backup.sh ]; then \
+	@if [ -f backup/backup-volumes.sh ]; then \
+		sudo ./backup/backup-volumes.sh; \
+	elif [ -f scripts/backup.sh ]; then \
 		./scripts/backup.sh; \
 	else \
 		echo "❌ Backup script not found"; \
