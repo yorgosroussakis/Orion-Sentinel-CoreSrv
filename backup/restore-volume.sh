@@ -233,7 +233,7 @@ restore_archive() {
     
     # Extract archive
     info "Extracting to: $volume_path"
-    if ! tar -xzf "$archive" -C "$parent_dir" 2>&1; then
+    if ! tar -xzf "$archive" -C "$parent_dir"; then
         error "Failed to extract backup archive"
     fi
     

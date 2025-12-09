@@ -99,6 +99,7 @@ jobs:
 
       - name: Run yamllint
         run: |
+          # Run yamllint with custom config, continue on warnings
           yamllint -c .yamllint.yml \
             compose/*.yml \
             monitoring/**/*.yml \
@@ -106,7 +107,7 @@ jobs:
             maintenance/**/*.yml \
             search/**/*.yml \
             home-automation/**/*.conf.example \
-            agents/**/*.yml || true
+            agents/**/*.yml || exit 0
 
   lint-shell:
     name: Lint Shell Scripts
@@ -120,7 +121,10 @@ jobs:
 
       - name: Run shellcheck
         run: |
-          find scripts/ -name "*.sh" -type f -exec shellcheck {} + || true
+          # Run shellcheck with warning level, allowing some common patterns
+          # SC2086: Double quote to prevent globbing and word splitting (common in scripts)
+          # SC1091: Not following sourced files (common for env files)
+          find scripts/ -name "*.sh" -type f -exec shellcheck -e SC2086,SC1091 {} +
 
   smoke-test:
     name: Smoke Test - Stack Health

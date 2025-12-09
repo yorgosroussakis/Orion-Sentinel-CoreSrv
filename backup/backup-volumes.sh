@@ -162,7 +162,7 @@ backup_volume() {
     local parent_dir=$(dirname "$volume_path")
     local target_name=$(basename "$volume_path")
     
-    if ! tar -czf "$archive_path" -C "$parent_dir" "$target_name" 2>&1; then
+    if ! tar -czf "$archive_path" -C "$parent_dir" "$target_name"; then
         error "  Failed to create backup archive for $service"
     fi
     
