@@ -109,7 +109,7 @@ jobs:
             core/**/*.yml \
             maintenance/**/*.yml \
             search/**/*.yml \
-            agents/**/*.yml || exit 0
+            agents/**/*.yml
 
   lint-shell:
     name: Lint Shell Scripts
