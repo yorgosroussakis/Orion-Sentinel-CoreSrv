@@ -283,19 +283,19 @@ if command -v openssl >/dev/null 2>&1; then
     SESSION_SECRET=$(openssl rand -hex 32)
     ENCRYPTION_KEY=$(openssl rand -hex 32)
     
-    # Update .env if it exists
+    # Update .env if it exists - use unique placeholders for each secret
     if [ -f .env ]; then
-        sed -i "s/changeme-run-openssl-rand-hex-32-to-generate/$JWT_SECRET/" .env
-        sed -i "s/changeme-run-openssl-rand-hex-32-to-generate/$SESSION_SECRET/2" .env
-        sed -i "s/changeme-run-openssl-rand-hex-32-to-generate/$ENCRYPTION_KEY/3" .env
+        sed -i "s|AUTHELIA_JWT_SECRET=changeme-run-openssl-rand-hex-32-to-generate|AUTHELIA_JWT_SECRET=$JWT_SECRET|" .env
+        sed -i "s|AUTHELIA_SESSION_SECRET=changeme-run-openssl-rand-hex-32-to-generate|AUTHELIA_SESSION_SECRET=$SESSION_SECRET|" .env
+        sed -i "s|AUTHELIA_STORAGE_ENCRYPTION_KEY=changeme-run-openssl-rand-hex-32-to-generate|AUTHELIA_STORAGE_ENCRYPTION_KEY=$ENCRYPTION_KEY|" .env
         success "Authelia secrets generated and updated in .env"
     fi
     
     # Also update env/.env.gateway if it exists
     if [ -f env/.env.gateway ]; then
-        sed -i "s/change-me-run-openssl-rand-hex-32/$JWT_SECRET/" env/.env.gateway
-        sed -i "s/change-me-run-openssl-rand-hex-32/$SESSION_SECRET/2" env/.env.gateway
-        sed -i "s/change-me-run-openssl-rand-hex-32/$ENCRYPTION_KEY/3" env/.env.gateway
+        sed -i "s|AUTHELIA_JWT_SECRET=change-me-run-openssl-rand-hex-32|AUTHELIA_JWT_SECRET=$JWT_SECRET|" env/.env.gateway
+        sed -i "s|AUTHELIA_SESSION_SECRET=change-me-run-openssl-rand-hex-32|AUTHELIA_SESSION_SECRET=$SESSION_SECRET|" env/.env.gateway
+        sed -i "s|AUTHELIA_STORAGE_ENCRYPTION_KEY=change-me-run-openssl-rand-hex-32|AUTHELIA_STORAGE_ENCRYPTION_KEY=$ENCRYPTION_KEY|" env/.env.gateway
         success "Authelia secrets updated in env/.env.gateway"
     fi
 else

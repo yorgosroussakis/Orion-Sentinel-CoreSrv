@@ -125,13 +125,16 @@
 
 # System
 - System:
-    - Docker:
-        icon: docker.png
-        href: #
-        description: Container management
-        widget:
-          type: docker
-          url: /var/run/docker.sock
+    # Docker widget requires docker socket access
+    # For production, consider using docker-socket-proxy for security
+    # See: https://github.com/Tecnativa/docker-socket-proxy
+    # - Docker:
+    #     icon: docker.png
+    #     href: #
+    #     description: Container management
+    #     widget:
+    #       type: docker
+    #       url: /var/run/docker.sock
     
     - Node Exporter:
         icon: prometheus.png
