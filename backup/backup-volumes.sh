@@ -197,7 +197,9 @@ cleanup_old_backups() {
     if [ -d "$mode_path" ]; then
         # Find and remove old backup directories safely
         find "$mode_path" -type d -name "20*" -mtime +$retention_days 2>/dev/null | while read -r dir; do
-            rm -rf "$dir" 2>/dev/null || true
+            if ! rm -rf "$dir" 2>/dev/null; then
+                warn "Failed to remove old backup: $dir"
+            fi
         done
         success "Old backups cleaned up"
     fi
