@@ -131,7 +131,7 @@ Watchtower automatically updates running containers when new images are availabl
 
 ```yaml
 watchtower:
-  image: containrrr/watchtower:latest
+  image: containrrr/watchtower:1.7.1
   container_name: orion_watchtower
   restart: unless-stopped
   environment:
