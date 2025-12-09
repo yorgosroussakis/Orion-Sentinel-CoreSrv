@@ -1,311 +1,280 @@
 # Backup & Restore Scripts
 
-This directory contains scripts for backing up and restoring critical Orion-Sentinel-CoreSrv volumes.
+This directory contains scripts for backing up and restoring critical Orion Sentinel CoreSrv volumes.
 
 ## Quick Start
 
-### Backup All Critical Volumes
+### Backup Everything
 
 ```bash
-# Manual backup (no auto-cleanup)
+# Run weekly or monthly
 sudo ./backup/backup-volumes.sh
-
-# Daily backup (keeps last 7 days)
-sudo ./backup/backup-volumes.sh daily
-
-# Weekly backup (keeps last 30 days)
-sudo ./backup/backup-volumes.sh weekly
-
-# Monthly backup (keeps last 365 days)
-sudo ./backup/backup-volumes.sh monthly
 ```
 
-### Backup Specific Service
+Backups are saved to `/srv/backups/orion/YYYYMMDD/` by default.
+
+### Restore a Specific Volume
 
 ```bash
-# Backup only Jellyfin
-sudo ./backup/backup-volumes.sh daily jellyfin
+# Restore Traefik configuration from January 9, 2025
+sudo ./backup/restore-volume.sh core-traefik 20250109
 
-# Backup only Traefik
-sudo ./backup/backup-volumes.sh weekly traefik
+# Restore Jellyfin data
+sudo ./backup/restore-volume.sh media-jellyfin 20250109
 ```
 
-### Restore a Service
+## Scripts
+
+### backup-volumes.sh
+
+Creates timestamped backups of all critical service volumes.
+
+**Usage:**
+```bash
+sudo ./backup/backup-volumes.sh [BACKUP_TARGET_DIR]
+```
+
+**Arguments:**
+- `BACKUP_TARGET_DIR` - Optional. Where to store backups (default: `/srv/backups/orion`)
+
+**What gets backed up:**
+
+**Core Services** (Highest Priority):
+- `core-traefik` - Traefik configuration, dynamic configs, certificates
+- `core-authelia` - User database, authentication configuration
+- `core-redis` - Session storage
+
+**Media Service Configurations**:
+- `media-jellyfin` - Jellyfin database, libraries, users
+- `media-sonarr` - TV automation configuration
+- `media-radarr` - Movie automation configuration  
+- `media-prowlarr` - Indexer configuration
+- `media-jellyseerr` - Request management data
+- `media-qbittorrent` - Download client configuration
+- `media-bazarr` - Subtitle automation configuration
+
+> **Note:** Actual media files are NOT backed up (too large). Only configurations.
+
+**Monitoring Data** (Optional - can rebuild):
+- `monitoring-grafana` - Dashboards, datasources, users
+- `monitoring-prometheus` - Metrics database
+- `monitoring-loki` - Log aggregation data
+- `monitoring-uptime-kuma` - Uptime monitors
+
+**Home Automation**:
+- `homeauto-homeassistant` - Smart home configuration and database
+- `homeauto-zigbee2mqtt` - Zigbee device pairings
+- `homeauto-mosquitto` - MQTT broker configuration
+- `homeauto-mealie` - Recipe and meal planning data
+
+**Other Services**:
+- `search-searxng` - Search engine configuration
+- `maintenance-homepage` - Homepage dashboard configuration
+
+**Repository Configurations**:
+- All `.env` files (contain secrets and settings)
+
+**Features:**
+- Automatic cleanup of backups older than 30 days (configurable)
+- Backup manifest with restoration instructions
+- Individual tar.gz archives per service (granular restore)
+
+### restore-volume.sh
+
+Restores a specific service volume from backup.
+
+**Usage:**
+```bash
+sudo ./backup/restore-volume.sh <volume-name> <backup-date> [backup-dir]
+```
+
+**Arguments:**
+- `volume-name` - Name of volume to restore (see available volumes above)
+- `backup-date` - Backup date in YYYYMMDD format
+- `backup-dir` - Optional. Base backup directory (default: `/srv/backups/orion`)
+
+**Examples:**
+```bash
+# Restore Traefik from specific date
+sudo ./backup/restore-volume.sh core-traefik 20250109
+
+# Restore Home Assistant from custom backup location
+sudo ./backup/restore-volume.sh homeauto-homeassistant 20250108 /mnt/nas/backups
+```
+
+**Safety Features:**
+- Confirmation prompt before restore
+- Automatically stops related containers
+- Backs up current data before overwrite (with .backup-* suffix)
+- Automatically restarts containers after restore
+
+## Backup Strategy
+
+### Recommended Schedule
+
+**Daily** (automated with cron):
+- Core services: `core-traefik`, `core-authelia`
+- Critical configs: `.env` files
+
+**Weekly** (automated with cron):
+- All media service configurations
+- Home automation data
+- Full backup script
+
+**Monthly** (manual verification):
+- Verify backup integrity
+- Test restore procedure
+- Archive to external storage
+
+### Setting Up Automated Backups
+
+Add to crontab (`sudo crontab -e`):
 
 ```bash
-# Restore Jellyfin from weekly backup
-sudo ./backup/restore-volume.sh weekly 2024-12-09 jellyfin
+# Daily backup at 2 AM
+0 2 * * * /path/to/Orion-Sentinel-CoreSrv/backup/backup-volumes.sh >> /var/log/orion-backup.log 2>&1
 
-# Restore Traefik from daily backup, keeping old data as backup
-sudo ./backup/restore-volume.sh daily 2024-12-09 traefik --keep-backup
-
-# Restore without confirmation prompt
-sudo ./backup/restore-volume.sh manual 2024-12-09 homeassistant --force
+# Weekly backup to NAS at 3 AM on Sundays
+0 3 * * 0 /path/to/Orion-Sentinel-CoreSrv/backup/backup-volumes.sh /mnt/nas/backups >> /var/log/orion-backup.log 2>&1
 ```
 
-## Critical Volumes
+### Storage Requirements
 
-The following volumes are backed up:
+Approximate backup sizes (excluding media files):
 
-### Media Stack
-- **jellyfin** - Jellyfin media metadata and user data
-- **sonarr** - Sonarr TV show configuration
-- **radarr** - Radarr movie configuration
-- **prowlarr** - Prowlarr indexer configuration
-- **jellyseerr** - Jellyseerr request configuration
-- **qbittorrent** - qBittorrent settings and state
+- Core services: ~100 MB
+- Media configurations: ~500 MB
+- Monitoring data: ~1-5 GB (varies with retention)
+- Home automation: ~200 MB
+- Total (typical): ~2-6 GB
 
-### Gateway Stack
-- **traefik** - Traefik configuration and SSL certificates
-- **authelia** - Authelia SSO configuration and user database
+**Recommendations:**
+- Keep 30 days of backups on local disk (~60-180 GB)
+- Archive monthly backups to external storage
+- Media library backups require separate strategy (too large)
 
-### Monitoring Stack
-- **grafana** - Grafana dashboards and user preferences
-- **prometheus-config** - Prometheus configuration and rules
-- **loki-config** - Loki configuration
+## Disaster Recovery
 
-### Home Automation
-- **homeassistant** - Home Assistant configuration and automations
-- **mosquitto** - MQTT broker configuration
-- **zigbee2mqtt** - Zigbee2MQTT device database
-- **mealie** - Mealie recipe database
+### Full System Restore
 
-## Automated Backups with Cron
+If you need to rebuild from scratch:
 
-### Daily Backups at 2 AM
+1. **Fresh install** - Set up new system with Docker
+2. **Clone repository** - Get latest code
+3. **Restore .env files**:
+   ```bash
+   cd /path/to/backups/20250109
+   tar -xzf orion-backup-*-repo-configs.tar.gz -C /path/to/Orion-Sentinel-CoreSrv/
+   ```
+4. **Run bootstrap** - Creates directory structure:
+   ```bash
+   sudo ./scripts/bootstrap-coresrv.sh
+   ```
+5. **Restore core services**:
+   ```bash
+   sudo ./backup/restore-volume.sh core-traefik 20250109
+   sudo ./backup/restore-volume.sh core-authelia 20250109
+   ```
+6. **Restore other services** - As needed
+7. **Start services**:
+   ```bash
+   make up-full
+   ```
+
+### Partial Service Restore
+
+To restore just one service (e.g., Jellyfin after corruption):
+
+1. **Stop service**:
+   ```bash
+   make down
+   ```
+2. **Restore volume**:
+   ```bash
+   sudo ./backup/restore-volume.sh media-jellyfin 20250109
+   ```
+3. **Restart**:
+   ```bash
+   make up-media
+   ```
+
+## Backup Verification
+
+Periodically verify your backups:
 
 ```bash
-# Edit crontab as root
-sudo crontab -e
+# List available backups
+ls -lh /srv/backups/orion/
 
-# Add this line:
-0 2 * * * /path/to/Orion-Sentinel-CoreSrv/backup/backup-volumes.sh daily >> /var/log/orion-backup.log 2>&1
+# Check backup manifest
+cat /srv/backups/orion/20250109/orion-backup-*-manifest.txt
+
+# Test restore to temp location (advanced)
+sudo ./backup/restore-volume.sh core-traefik 20250109 /tmp/test-restore
 ```
 
-### Weekly Backups on Sunday at 3 AM
+## Excluded from Backups
+
+The following are **intentionally excluded** to save space:
+
+- **Media files** - Movies, TV shows, music (too large, can re-download)
+- **Docker images** - Can be pulled fresh
+- **Log files** - Only current logs needed
+- **Temporary data** - Cache, session files
+
+These should be backed up separately if needed (e.g., media to NAS).
+
+## Security
+
+**Important:** Backup files contain sensitive data:
+
+- Traefik SSL certificates
+- Authelia user passwords (hashed)
+- API keys and tokens from .env files
+- Service databases
+
+**Recommendations:**
+- Encrypt backups if storing off-site
+- Restrict access to backup directory (`chmod 700`)
+- Don't share backups publicly
+- Use encrypted external storage for archival
+
+Example encryption:
 
 ```bash
-# Edit crontab as root
-sudo crontab -e
+# Encrypt backup directory
+tar -czf - /srv/backups/orion/20250109 | gpg -c > orion-backup-20250109.tar.gz.gpg
 
-# Add this line:
-0 3 * * 0 /path/to/Orion-Sentinel-CoreSrv/backup/backup-volumes.sh weekly >> /var/log/orion-backup.log 2>&1
-```
-
-### Monthly Backups on 1st at 4 AM
-
-```bash
-# Edit crontab as root
-sudo crontab -e
-
-# Add this line:
-0 4 1 * * /path/to/Orion-Sentinel-CoreSrv/backup/backup-volumes.sh monthly >> /var/log/orion-backup.log 2>&1
-```
-
-### Combined Cron Schedule (Recommended)
-
-```bash
-# Daily backups at 2 AM (keeps 7 days)
-0 2 * * * /path/to/backup/backup-volumes.sh daily >> /var/log/orion-backup.log 2>&1
-
-# Weekly backups on Sunday at 3 AM (keeps 30 days)
-0 3 * * 0 /path/to/backup/backup-volumes.sh weekly >> /var/log/orion-backup.log 2>&1
-
-# Monthly backups on 1st at 4 AM (keeps 365 days)
-0 4 1 * * /path/to/backup/backup-volumes.sh monthly >> /var/log/orion-backup.log 2>&1
-```
-
-## Backup Location
-
-Backups are stored in:
-```
-/srv/backups/orion/
-├── daily/
-│   └── 2024-12-09/
-│       ├── jellyfin-20241209-020000.tar.gz
-│       ├── traefik-20241209-020100.tar.gz
-│       └── MANIFEST.txt
-├── weekly/
-│   └── 2024-12-08/
-├── monthly/
-│   └── 2024-12-01/
-└── manual/
-    └── 2024-12-09/
-```
-
-## Environment Variables
-
-You can customize backup locations by setting environment variables:
-
-```bash
-# Custom backup destination
-export BACKUP_ROOT=/mnt/nas/backups/orion
-
-# Custom source paths
-export MEDIA_CONFIG_ROOT=/srv/docker/media
-export GATEWAY_CONFIG_ROOT=/srv/orion-sentinel-core/core
-export MONITORING_ROOT=/srv/orion-sentinel-core/monitoring
-export HOME_AUTOMATION_ROOT=/srv/orion-sentinel-core/home-automation
-
-# Run backup
-sudo -E ./backup/backup-volumes.sh daily
-```
-
-## Restore Process
-
-### 1. Stop the Service
-
-Before restoring, always stop the service:
-
-```bash
-# For media services
-docker compose -f compose/docker-compose.media.yml stop jellyfin
-
-# For gateway services
-docker compose -f compose/docker-compose.gateway.yml stop traefik
-
-# For monitoring services
-docker compose -f compose/docker-compose.observability.yml stop grafana
-
-# For home automation services
-docker compose -f compose/docker-compose.homeauto.yml stop homeassistant
-```
-
-### 2. Run Restore
-
-```bash
-sudo ./backup/restore-volume.sh daily 2024-12-09 jellyfin --keep-backup
-```
-
-### 3. Start and Verify
-
-```bash
-# Start the service
-docker compose -f compose/docker-compose.media.yml start jellyfin
-
-# Check logs
-docker compose -f compose/docker-compose.media.yml logs -f jellyfin
-
-# Verify service is working
-curl http://localhost:8096
-```
-
-### 4. Clean Up Old Backup (Optional)
-
-If the restore was successful and `--keep-backup` was used:
-
-```bash
-# Remove the old backup
-sudo rm -rf /srv/docker/media/jellyfin/config.backup-*
-```
-
-## What's NOT Backed Up
-
-The following are excluded due to size or rebuild-ability:
-
-- **Media library files** (`/srv/media/library`) - Keep separate backups
-- **Download files** (`/srv/media/downloads`) - Temporary data
-- **Prometheus metrics data** - Time-series data, can be rebuilt
-- **Loki logs data** - Log data, can be rebuilt
-- **Raw log files** - Can be rebuilt from sources
-
-## Offsite Backup
-
-For disaster recovery, copy backups to an offsite location:
-
-```bash
-# Sync to NAS
-rsync -avz /srv/backups/orion/ /mnt/nas/backups/orion/
-
-# Sync to remote server via SSH
-rsync -avz /srv/backups/orion/ user@remote:/backups/orion/
-
-# Encrypt and upload to cloud (example with rclone)
-tar -czf - /srv/backups/orion/daily/ | \
-  gpg --encrypt --recipient your@email.com | \
-  rclone rcat remote:orion-backups/daily-$(date +%Y%m%d).tar.gz.gpg
-```
-
-## Testing Backups
-
-**Critical: Test your backups regularly!**
-
-```bash
-# Monthly backup test (add to cron)
-0 5 15 * * /path/to/backup/test-restore.sh >> /var/log/orion-backup-test.log 2>&1
-```
-
-Example test script:
-```bash
-#!/bin/bash
-# test-restore.sh - Test backup integrity
-
-BACKUP_ROOT=/srv/backups/orion
-LATEST_DAILY=$(ls -t $BACKUP_ROOT/daily/ | head -n 1)
-
-echo "Testing backup from: $LATEST_DAILY"
-
-# Test a few critical services
-for service in jellyfin traefik grafana; do
-    ARCHIVE=$(find $BACKUP_ROOT/daily/$LATEST_DAILY -name "${service}-*.tar.gz" | head -n 1)
-    if [ -f "$ARCHIVE" ]; then
-        echo "Testing $service: $ARCHIVE"
-        tar -tzf "$ARCHIVE" > /dev/null && echo "✓ $service OK" || echo "✗ $service FAILED"
-    fi
-done
+# Decrypt when needed
+gpg -d orion-backup-20250109.tar.gz.gpg | tar -xz
 ```
 
 ## Troubleshooting
 
-### Permission Denied
-
-Run with sudo:
+**"Permission denied" errors:**
 ```bash
-sudo ./backup/backup-volumes.sh daily
+# Scripts must be run as root
+sudo ./backup/backup-volumes.sh
 ```
 
-### Service Still Running Warning
-
-Stop the service before restoring:
+**"No space left on device":**
 ```bash
-docker compose -f compose/docker-compose.media.yml stop jellyfin
-./backup/restore-volume.sh daily 2024-12-09 jellyfin
+# Clean up old backups manually
+sudo rm -rf /srv/backups/orion/YYYYMMDD
+
+# Or reduce RETENTION_DAYS
+export RETENTION_DAYS=7
+sudo ./backup/backup-volumes.sh
 ```
 
-### Backup Directory Not Found
-
-Check environment variables:
+**Restore doesn't start containers:**
 ```bash
-echo $BACKUP_ROOT
-echo $MEDIA_CONFIG_ROOT
+# Manually start after restore
+make up-full
 ```
 
-### Archive Extraction Failed
+## See Also
 
-Verify archive integrity:
-```bash
-tar -tzf /srv/backups/orion/daily/2024-12-09/jellyfin-*.tar.gz
-```
-
-## Security Notes
-
-⚠️ **IMPORTANT**: Backups contain sensitive data including:
-- API keys and tokens
-- User passwords (hashed)
-- SSL certificates
-- Authentication secrets
-- Configuration files with credentials
-
-**Security recommendations:**
-1. Encrypt backups for offsite storage
-2. Use restrictive permissions (600/700)
-3. Store backups on encrypted volumes
-4. Use secure transfer methods (SSH, encrypted channels)
-5. Regularly rotate encryption keys
-6. Test restore procedures in isolated environments
-
-## For More Information
-
-See the main documentation:
-- [docs/BACKUP-RESTORE.md](../docs/BACKUP-RESTORE.md) - Complete backup/restore guide
-- [README.md](../README.md) - Main repository documentation
+- [docs/BACKUP-RESTORE.md](../docs/BACKUP-RESTORE.md) - Detailed backup/restore procedures
+- [docs/RUNBOOKS.md](../docs/RUNBOOKS.md) - Operational procedures
+- [README.md](../README.md) - Main documentation

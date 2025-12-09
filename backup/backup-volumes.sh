@@ -1,11 +1,21 @@
 #!/usr/bin/env bash
-# backup-volumes.sh - Backup Docker volumes for Orion-Sentinel-CoreSrv
-# Creates timestamped tar.gz archives of critical service volumes
+################################################################################
+# backup-volumes.sh - Backup critical Orion Sentinel volumes
+#
+# This script creates timestamped tar.gz archives of all critical service
+# volumes and configuration data.
 #
 # Usage:
-#   sudo ./backup/backup-volumes.sh [daily|weekly|monthly]
-#   sudo ./backup/backup-volumes.sh all          # Backup all critical volumes
-#   sudo ./backup/backup-volumes.sh jellyfin     # Backup specific service
+#   sudo ./backup/backup-volumes.sh [BACKUP_TARGET_DIR]
+#
+# Arguments:
+#   BACKUP_TARGET_DIR - Optional. Directory to store backups.
+#                       Default: /srv/backups/orion
+#
+# Example:
+#   sudo ./backup/backup-volumes.sh /mnt/nas/backups
+#
+################################################################################
 
 set -euo pipefail
 
@@ -16,72 +26,6 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-info() { echo -e "${BLUE}ℹ${NC} $*"; }
-success() { echo -e "${GREEN}✓${NC} $*"; }
-warn() { echo -e "${YELLOW}⚠${NC} $*"; }
-error() { echo -e "${RED}✗${NC} $*"; exit 1; }
-
-# ============================================================================
-# Configuration
-# ============================================================================
-
-# Backup destination
-BACKUP_ROOT=${BACKUP_ROOT:-/srv/backups/orion}
-TIMESTAMP=$(date +%Y%m%d-%H%M%S)
-DATE_DIR=$(date +%Y-%m-%d)
-
-# Volume source paths (adjust to your configuration)
-MEDIA_CONFIG_ROOT=${MEDIA_CONFIG_ROOT:-/srv/docker/media}
-GATEWAY_CONFIG_ROOT=${GATEWAY_CONFIG_ROOT:-/srv/orion-sentinel-core/core}
-MONITORING_ROOT=${MONITORING_ROOT:-/srv/orion-sentinel-core/monitoring}
-HOME_AUTOMATION_ROOT=${HOME_AUTOMATION_ROOT:-/srv/orion-sentinel-core/home-automation}
-
-# Backup mode (daily, weekly, monthly)
-BACKUP_MODE=${1:-manual}
-
-# Retention policy (days)
-DAILY_RETENTION=7
-WEEKLY_RETENTION=30
-MONTHLY_RETENTION=365
-
-# ============================================================================
-# Critical Volumes to Backup
-# ============================================================================
-
-# Define critical volumes with their paths and descriptions
-declare -A CRITICAL_VOLUMES=(
-    # Media Stack
-    ["jellyfin"]="${MEDIA_CONFIG_ROOT}/jellyfin/config|Jellyfin media metadata and user data"
-    ["sonarr"]="${MEDIA_CONFIG_ROOT}/sonarr/config|Sonarr TV show configuration"
-    ["radarr"]="${MEDIA_CONFIG_ROOT}/radarr/config|Radarr movie configuration"
-    ["prowlarr"]="${MEDIA_CONFIG_ROOT}/prowlarr/config|Prowlarr indexer configuration"
-    ["jellyseerr"]="${MEDIA_CONFIG_ROOT}/jellyseerr/config|Jellyseerr request configuration"
-    ["qbittorrent"]="${MEDIA_CONFIG_ROOT}/qbittorrent/config|qBittorrent settings and state"
-    
-    # Gateway Stack
-    ["traefik"]="${GATEWAY_CONFIG_ROOT}/traefik|Traefik configuration and certificates"
-    ["authelia"]="${GATEWAY_CONFIG_ROOT}/authelia|Authelia SSO configuration and user database"
-    
-    # Monitoring Stack
-    ["grafana"]="${MONITORING_ROOT}/grafana/data|Grafana dashboards and user preferences"
-    ["prometheus-config"]="${MONITORING_ROOT}/prometheus|Prometheus configuration and rules"
-    ["loki-config"]="${MONITORING_ROOT}/loki|Loki configuration"
-    
-    # Home Automation
-    ["homeassistant"]="${HOME_AUTOMATION_ROOT}/homeassistant/config|Home Assistant configuration and automations"
-    ["mosquitto"]="${HOME_AUTOMATION_ROOT}/mosquitto|MQTT broker configuration"
-    ["zigbee2mqtt"]="${HOME_AUTOMATION_ROOT}/zigbee2mqtt/data|Zigbee2MQTT device database"
-    ["mealie"]="${HOME_AUTOMATION_ROOT}/mealie|Mealie recipe database"
-)
-
-# ============================================================================
-# Functions
-# ============================================================================
-
-show_help() {
-    cat << EOF
-Orion-Sentinel-CoreSrv Volume Backup Script
-===========================================
 
 Usage:
   sudo ./backup/backup-volumes.sh [MODE] [SERVICE]
@@ -211,7 +155,6 @@ create_manifest() {
     
     cat > "$manifest" << EOF
 Orion-Sentinel-CoreSrv Volume Backup
-====================================
 
 Backup Created: $(date -Iseconds)
 Backup Mode: $BACKUP_MODE
@@ -260,69 +203,257 @@ EOF
 # ============================================================================
 # Main
 # ============================================================================
+info() {
+    echo -e "${BLUE}[INFO]${NC} $*"
+}
+
+success() {
+    echo -e "${GREEN}[OK]${NC} $*"
+}
+
+warn() {
+    echo -e "${YELLOW}[WARN]${NC} $*"
+}
+
+error() {
+    echo -e "${RED}[ERR]${NC} $*"
+    exit 1
+}
+
+# Configuration
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(dirname "$SCRIPT_DIR")"
+TIMESTAMP=$(date +%Y%m%d-%H%M%S)
+DATE_ONLY=$(date +%Y%m%d)
+
+# Default backup target
+BACKUP_TARGET="${1:-/srv/backups/orion}"
+BACKUP_NAME="orion-backup-${TIMESTAMP}"
+BACKUP_DIR="${BACKUP_TARGET}/${DATE_ONLY}"
+
+# Source directory (where actual data lives)
+SOURCE_ROOT="/srv/orion-sentinel-core"
+
+# Retention (keep backups for N days)
+RETENTION_DAYS=${RETENTION_DAYS:-30}
+
+################################################################################
+# CRITICAL VOLUMES TO BACKUP
+################################################################################
+
+# Define critical volumes/directories to backup
+declare -A CRITICAL_VOLUMES=(
+    # Core services (highest priority)
+    ["core-traefik"]="${SOURCE_ROOT}/core/traefik"
+    ["core-authelia"]="${SOURCE_ROOT}/core/authelia"
+    ["core-redis"]="${SOURCE_ROOT}/core/redis"
+    
+    # Media configurations (not the actual media files - too large)
+    ["media-jellyfin"]="${SOURCE_ROOT}/media/config/jellyfin"
+    ["media-sonarr"]="${SOURCE_ROOT}/media/config/sonarr"
+    ["media-radarr"]="${SOURCE_ROOT}/media/config/radarr"
+    ["media-prowlarr"]="${SOURCE_ROOT}/media/config/prowlarr"
+    ["media-jellyseerr"]="${SOURCE_ROOT}/media/config/jellyseerr"
+    ["media-qbittorrent"]="${SOURCE_ROOT}/media/config/qbittorrent"
+    ["media-bazarr"]="${SOURCE_ROOT}/media/config/bazarr"
+    
+    # Monitoring data (optional - can rebuild)
+    ["monitoring-grafana"]="${SOURCE_ROOT}/monitoring/grafana"
+    ["monitoring-prometheus"]="${SOURCE_ROOT}/monitoring/prometheus"
+    ["monitoring-loki"]="${SOURCE_ROOT}/monitoring/loki"
+    ["monitoring-uptime-kuma"]="${SOURCE_ROOT}/monitoring/uptime-kuma"
+    
+    # Home automation
+    ["homeauto-homeassistant"]="${SOURCE_ROOT}/home-automation/homeassistant"
+    ["homeauto-zigbee2mqtt"]="${SOURCE_ROOT}/home-automation/zigbee2mqtt"
+    ["homeauto-mosquitto"]="${SOURCE_ROOT}/home-automation/mosquitto"
+    ["homeauto-mealie"]="${SOURCE_ROOT}/home-automation/mealie"
+    
+    # Search
+    ["search-searxng"]="${SOURCE_ROOT}/search/searxng"
+    
+    # Maintenance
+    ["maintenance-homepage"]="${SOURCE_ROOT}/maintenance/homepage"
+)
+
+# Also backup repo configuration files
+REPO_CONFIGS=(
+    ".env"
+    "env/.env.media"
+    "env/.env.gateway"
+    "env/.env.observability"
+    "env/.env.homeauto"
+)
+
+################################################################################
+# FUNCTIONS
+################################################################################
+
+check_root() {
+    if [[ $EUID -ne 0 ]]; then
+        error "This script must be run as root (use sudo)"
+    fi
+}
+
+create_backup_dir() {
+    info "Creating backup directory: ${BACKUP_DIR}"
+    mkdir -p "${BACKUP_DIR}"
+    
+    if [[ ! -d "${BACKUP_DIR}" ]]; then
+        error "Failed to create backup directory"
+    fi
+    
+    success "Backup directory ready: ${BACKUP_DIR}"
+}
+
+backup_volume() {
+    local name=$1
+    local path=$2
+    local archive="${BACKUP_DIR}/${BACKUP_NAME}-${name}.tar.gz"
+    
+    if [[ ! -d "$path" ]]; then
+        warn "Skipping ${name}: directory not found at ${path}"
+        return 0
+    fi
+    
+    info "Backing up ${name}..."
+    
+    # Create tar.gz archive
+    if tar -czf "${archive}" -C "$(dirname "$path")" "$(basename "$path")" 2>/dev/null; then
+        local size=$(du -h "${archive}" | cut -f1)
+        success "Backed up ${name} (${size})"
+    else
+        warn "Failed to backup ${name}"
+    fi
+}
+
+backup_repo_configs() {
+    local config_archive="${BACKUP_DIR}/${BACKUP_NAME}-repo-configs.tar.gz"
+    
+    info "Backing up repository configuration files..."
+    
+    cd "${REPO_ROOT}"
+    
+    # Create list of existing config files
+    local files_to_backup=()
+    for config in "${REPO_CONFIGS[@]}"; do
+        if [[ -f "$config" ]]; then
+            files_to_backup+=("$config")
+        fi
+    done
+    
+    if [[ ${#files_to_backup[@]} -eq 0 ]]; then
+        warn "No configuration files found to backup"
+        return 0
+    fi
+    
+    if tar -czf "${config_archive}" "${files_to_backup[@]}" 2>/dev/null; then
+        local size=$(du -h "${config_archive}" | cut -f1)
+        success "Backed up ${#files_to_backup[@]} config file(s) (${size})"
+    else
+        warn "Failed to backup configuration files"
+    fi
+}
+
+create_backup_manifest() {
+    local manifest="${BACKUP_DIR}/${BACKUP_NAME}-manifest.txt"
+    
+    info "Creating backup manifest..."
+    
+    cat > "${manifest}" << EOF
+Orion Sentinel CoreSrv Backup Manifest
+
+Backup Timestamp: ${TIMESTAMP}
+Backup Location:  ${BACKUP_DIR}
+Hostname:         $(hostname)
+User:             $(whoami)
+
+Backed up volumes:
+EOF
+    
+    for name in "${!CRITICAL_VOLUMES[@]}"; do
+        local path="${CRITICAL_VOLUMES[$name]}"
+        local archive="${BACKUP_NAME}-${name}.tar.gz"
+        
+        if [[ -f "${BACKUP_DIR}/${archive}" ]]; then
+            local size=$(du -h "${BACKUP_DIR}/${archive}" | awk '{print $1}')
+            echo "  ✓ ${name}: ${archive} (${size})" >> "${manifest}"
+        fi
+    done
+    
+    cat >> "${manifest}" << EOF
+
+Repository configs:
+  ${BACKUP_NAME}-repo-configs.tar.gz
+
+To restore a specific volume:
+  sudo ./backup/restore-volume.sh <volume-name> <backup-date>
+
+Example:
+  sudo ./backup/restore-volume.sh core-traefik ${DATE_ONLY}
+EOF
+    
+    success "Manifest created: ${manifest}"
+}
+
+cleanup_old_backups() {
+    info "Cleaning up backups older than ${RETENTION_DAYS} days..."
+    
+    if [[ ! -d "${BACKUP_TARGET}" ]]; then
+        return 0
+    fi
+    
+    local deleted=0
+    
+    # Find and delete old backup directories
+    while IFS= read -r -d '' dir; do
+        rm -rf "$dir"
+        deleted=$((deleted + 1))
+    done < <(find "${BACKUP_TARGET}" -maxdepth 1 -type d -mtime "+${RETENTION_DAYS}" -print0 2>/dev/null)
+    
+    if [[ $deleted -gt 0 ]]; then
+        success "Removed ${deleted} old backup(s)"
+    else
+        info "No old backups to remove"
+    fi
+}
+
+################################################################################
+# MAIN
+################################################################################
 
 main() {
     echo ""
     echo "╔════════════════════════════════════════════════════════════╗"
-    echo "║  Orion-Sentinel-CoreSrv Volume Backup                      ║"
+    echo "║  Orion Sentinel CoreSrv - Volume Backup                    ║"
     echo "╚════════════════════════════════════════════════════════════╝"
     echo ""
     
-    # Handle help flag
-    if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ]; then
-        show_help
-        exit 0
-    fi
+    check_root
+    create_backup_dir
     
-    # Parse arguments
-    local target_service=${2:-all}
-    
-    info "Backup mode: $BACKUP_MODE"
-    info "Target: $target_service"
+    info "Starting backup at $(date)"
     echo ""
     
-    check_requirements
-    create_backup_dirs
-    
-    # Perform backups
-    if [ "$target_service" = "all" ]; then
-        info "Backing up all critical volumes..."
-        echo ""
-        local count=0
-        for service in "${!CRITICAL_VOLUMES[@]}"; do
-            backup_volume "$service"
-            count=$((count + 1))
-            echo ""
-        done
-        success "Backed up $count volumes"
-    else
-        if [ -z "${CRITICAL_VOLUMES[$target_service]:-}" ]; then
-            error "Unknown service: $target_service (use --help to see available services)"
-        fi
-        backup_volume "$target_service"
-    fi
+    # Backup all critical volumes
+    for name in "${!CRITICAL_VOLUMES[@]}"; do
+        backup_volume "$name" "${CRITICAL_VOLUMES[$name]}"
+    done
     
     echo ""
-    create_manifest
+    backup_repo_configs
+    
+    echo ""
+    create_backup_manifest
+    
+    echo ""
     cleanup_old_backups
     
     echo ""
-    echo "╔════════════════════════════════════════════════════════════╗"
-    echo "║  Backup completed successfully!                            ║"
-    echo "╚════════════════════════════════════════════════════════════╝"
+    success "Backup completed successfully!"
     echo ""
-    
-    local backup_path="${BACKUP_ROOT}/${BACKUP_MODE}/${DATE_DIR}"
-    success "Backup location: $backup_path"
-    
-    info "Next steps:"
-    info "  1. Verify backup integrity: ls -lh $backup_path"
-    info "  2. Test restore procedure: sudo ./backup/restore-volume.sh --help"
-    info "  3. Copy to offsite location for disaster recovery"
-    echo ""
-    
-    warn "IMPORTANT: These backups may contain sensitive data"
-    warn "           Store securely and encrypt for offsite storage"
+    info "Backup location: ${BACKUP_DIR}"
+    info "To restore a volume: sudo ./backup/restore-volume.sh <volume-name> ${DATE_ONLY}"
     echo ""
 }
 

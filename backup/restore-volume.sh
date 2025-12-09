@@ -1,10 +1,32 @@
 #!/usr/bin/env bash
-# restore-volume.sh - Restore Docker volumes for Orion-Sentinel-CoreSrv
-# Restores service volumes from backup archives
+################################################################################
+# restore-volume.sh - Restore a specific Orion Sentinel volume from backup
+#
+# This script restores a single service volume from a timestamped backup.
 #
 # Usage:
-#   sudo ./backup/restore-volume.sh <backup-mode> <date> <service>
-#   sudo ./backup/restore-volume.sh daily 2024-12-09 jellyfin
+#   sudo ./backup/restore-volume.sh <volume-name> <backup-date> [backup-dir]
+#
+# Arguments:
+#   volume-name   - Name of the volume to restore (e.g., core-traefik)
+#   backup-date   - Date of backup in YYYYMMDD format (e.g., 20250109)
+#   backup-dir    - Optional. Base backup directory. Default: /srv/backups/orion
+#
+# Examples:
+#   sudo ./backup/restore-volume.sh core-traefik 20250109
+#   sudo ./backup/restore-volume.sh media-jellyfin 20250108 /mnt/nas/backups
+#
+# Available volumes:
+#   Core: core-traefik, core-authelia, core-redis
+#   Media: media-jellyfin, media-sonarr, media-radarr, media-prowlarr, 
+#          media-jellyseerr, media-qbittorrent, media-bazarr
+#   Monitoring: monitoring-grafana, monitoring-prometheus, monitoring-loki,
+#               monitoring-uptime-kuma
+#   Home Auto: homeauto-homeassistant, homeauto-zigbee2mqtt, 
+#              homeauto-mosquitto, homeauto-mealie
+#   Other: search-searxng, maintenance-homepage
+#
+################################################################################
 
 set -euo pipefail
 
@@ -15,60 +37,6 @@ YELLOW='\033[1;33m'
 BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
-info() { echo -e "${BLUE}ℹ${NC} $*"; }
-success() { echo -e "${GREEN}✓${NC} $*"; }
-warn() { echo -e "${YELLOW}⚠${NC} $*"; }
-error() { echo -e "${RED}✗${NC} $*"; exit 1; }
-
-# ============================================================================
-# Configuration
-# ============================================================================
-
-BACKUP_ROOT=${BACKUP_ROOT:-/srv/backups/orion}
-
-# Volume destination paths (adjust to your configuration)
-MEDIA_CONFIG_ROOT=${MEDIA_CONFIG_ROOT:-/srv/docker/media}
-GATEWAY_CONFIG_ROOT=${GATEWAY_CONFIG_ROOT:-/srv/orion-sentinel-core/core}
-MONITORING_ROOT=${MONITORING_ROOT:-/srv/orion-sentinel-core/monitoring}
-HOME_AUTOMATION_ROOT=${HOME_AUTOMATION_ROOT:-/srv/orion-sentinel-core/home-automation}
-
-# ============================================================================
-# Critical Volumes (must match backup-volumes.sh)
-# ============================================================================
-
-declare -A CRITICAL_VOLUMES=(
-    # Media Stack
-    ["jellyfin"]="${MEDIA_CONFIG_ROOT}/jellyfin/config"
-    ["sonarr"]="${MEDIA_CONFIG_ROOT}/sonarr/config"
-    ["radarr"]="${MEDIA_CONFIG_ROOT}/radarr/config"
-    ["prowlarr"]="${MEDIA_CONFIG_ROOT}/prowlarr/config"
-    ["jellyseerr"]="${MEDIA_CONFIG_ROOT}/jellyseerr/config"
-    ["qbittorrent"]="${MEDIA_CONFIG_ROOT}/qbittorrent/config"
-    
-    # Gateway Stack
-    ["traefik"]="${GATEWAY_CONFIG_ROOT}/traefik"
-    ["authelia"]="${GATEWAY_CONFIG_ROOT}/authelia"
-    
-    # Monitoring Stack
-    ["grafana"]="${MONITORING_ROOT}/grafana/data"
-    ["prometheus-config"]="${MONITORING_ROOT}/prometheus"
-    ["loki-config"]="${MONITORING_ROOT}/loki"
-    
-    # Home Automation
-    ["homeassistant"]="${HOME_AUTOMATION_ROOT}/homeassistant/config"
-    ["mosquitto"]="${HOME_AUTOMATION_ROOT}/mosquitto"
-    ["zigbee2mqtt"]="${HOME_AUTOMATION_ROOT}/zigbee2mqtt/data"
-    ["mealie"]="${HOME_AUTOMATION_ROOT}/mealie"
-)
-
-# ============================================================================
-# Functions
-# ============================================================================
-
-show_help() {
-    cat << EOF
-Orion-Sentinel-CoreSrv Volume Restore Script
-============================================
 
 Usage:
   sudo ./backup/restore-volume.sh <backup-mode> <date> <service> [options]
@@ -135,216 +103,297 @@ check_requirements() {
     # Check if docker is available
     if ! command -v docker &> /dev/null; then
         warn "docker command not found. Cannot check if service is running."
+info() {
+    echo -e "${BLUE}[INFO]${NC} $*"
+}
+
+success() {
+    echo -e "${GREEN}[OK]${NC} $*"
+}
+
+warn() {
+    echo -e "${YELLOW}[WARN]${NC} $*"
+}
+
+error() {
+    echo -e "${RED}[ERR]${NC} $*"
+    exit 1
+}
+
+# Configuration
+SOURCE_ROOT="/srv/orion-sentinel-core"
+
+# Volume name to path mapping
+declare -A VOLUME_PATHS=(
+    # Core services
+    ["core-traefik"]="${SOURCE_ROOT}/core/traefik"
+    ["core-authelia"]="${SOURCE_ROOT}/core/authelia"
+    ["core-redis"]="${SOURCE_ROOT}/core/redis"
+    
+    # Media configurations
+    ["media-jellyfin"]="${SOURCE_ROOT}/media/config/jellyfin"
+    ["media-sonarr"]="${SOURCE_ROOT}/media/config/sonarr"
+    ["media-radarr"]="${SOURCE_ROOT}/media/config/radarr"
+    ["media-prowlarr"]="${SOURCE_ROOT}/media/config/prowlarr"
+    ["media-jellyseerr"]="${SOURCE_ROOT}/media/config/jellyseerr"
+    ["media-qbittorrent"]="${SOURCE_ROOT}/media/config/qbittorrent"
+    ["media-bazarr"]="${SOURCE_ROOT}/media/config/bazarr"
+    
+    # Monitoring data
+    ["monitoring-grafana"]="${SOURCE_ROOT}/monitoring/grafana"
+    ["monitoring-prometheus"]="${SOURCE_ROOT}/monitoring/prometheus"
+    ["monitoring-loki"]="${SOURCE_ROOT}/monitoring/loki"
+    ["monitoring-uptime-kuma"]="${SOURCE_ROOT}/monitoring/uptime-kuma"
+    
+    # Home automation
+    ["homeauto-homeassistant"]="${SOURCE_ROOT}/home-automation/homeassistant"
+    ["homeauto-zigbee2mqtt"]="${SOURCE_ROOT}/home-automation/zigbee2mqtt"
+    ["homeauto-mosquitto"]="${SOURCE_ROOT}/home-automation/mosquitto"
+    ["homeauto-mealie"]="${SOURCE_ROOT}/home-automation/mealie"
+    
+    # Search
+    ["search-searxng"]="${SOURCE_ROOT}/search/searxng"
+    
+    # Maintenance
+    ["maintenance-homepage"]="${SOURCE_ROOT}/maintenance/homepage"
+)
+
+################################################################################
+# FUNCTIONS
+################################################################################
+
+usage() {
+    cat << EOF
+Usage: sudo ./backup/restore-volume.sh <volume-name> <backup-date> [backup-dir]
+
+Arguments:
+  volume-name   - Name of the volume to restore
+  backup-date   - Date of backup in YYYYMMDD format
+  backup-dir    - Optional. Base backup directory (default: /srv/backups/orion)
+
+Available volumes:
+EOF
+    
+    for volume in "${!VOLUME_PATHS[@]}"; do
+        echo "  - ${volume}"
+    done | sort
+    
+    echo ""
+    echo "Examples:"
+    echo "  sudo ./backup/restore-volume.sh core-traefik 20250109"
+    echo "  sudo ./backup/restore-volume.sh media-jellyfin 20250108"
+    exit 1
+}
+
+check_root() {
+    if [[ $EUID -ne 0 ]]; then
+        error "This script must be run as root (use sudo)"
+    fi
+}
+
+validate_volume() {
+    local volume=$1
+    
+    if [[ ! -v "VOLUME_PATHS[$volume]" ]]; then
+        error "Unknown volume: ${volume}. Run without arguments to see available volumes."
     fi
 }
 
 find_backup_archive() {
-    local backup_mode=$1
+    local volume=$1
     local backup_date=$2
-    local service=$3
+    local backup_base=$3
+    local backup_dir="${backup_base}/${backup_date}"
     
-    local backup_dir="${BACKUP_ROOT}/${backup_mode}/${backup_date}"
-    
-    if [ ! -d "$backup_dir" ]; then
-        error "Backup directory does not exist: $backup_dir"
+    if [[ ! -d "${backup_dir}" ]]; then
+        error "Backup directory not found: ${backup_dir}"
     fi
     
-    # Find the most recent backup for this service on this date
-    local archive=$(find "$backup_dir" -name "${service}-*.tar.gz" -type f | sort -r | head -n 1)
+    # Find the backup archive (there may be multiple with different timestamps)
+    local archives=($(find "${backup_dir}" -name "*-${volume}.tar.gz" -type f 2>/dev/null))
     
-    if [ -z "$archive" ]; then
-        error "No backup archive found for service '$service' in $backup_dir"
+    if [[ ${#archives[@]} -eq 0 ]]; then
+        error "No backup found for ${volume} in ${backup_dir}"
     fi
     
-    echo "$archive"
+    # Use the most recent one if multiple exist
+    local archive="${archives[-1]}"
+    
+    echo "${archive}"
 }
 
-check_service_running() {
-    local service=$1
-    
-    if ! command -v docker &> /dev/null; then
-        return 0
-    fi
-    
-    # Check if container is running
-    if docker ps --format '{{.Names}}' | grep -q "orion_${service}"; then
-        warn "Service '$service' appears to be running!"
-        warn "It's recommended to stop the service before restoring."
-        echo ""
-        info "To stop the service, run:"
-        info "  docker compose -f compose/docker-compose.<module>.yml stop $service"
-        echo ""
-        
-        if [ "${FORCE:-false}" != "true" ]; then
-            read -p "Continue anyway? (y/N): " -n 1 -r
-            echo
-            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-                error "Restore cancelled by user"
-            fi
-        fi
-    fi
-}
-
-backup_existing_volume() {
-    local volume_path=$1
-    local service=$2
-    
-    if [ ! -e "$volume_path" ]; then
-        info "No existing volume found at $volume_path (this is OK for new installs)"
-        return 0
-    fi
-    
-    if [ "${KEEP_BACKUP:-false}" = "true" ]; then
-        local backup_suffix=".backup-$(date +%Y%m%d-%H%M%S)"
-        local backup_path="${volume_path}${backup_suffix}"
-        
-        info "Creating backup of existing volume..."
-        mv "$volume_path" "$backup_path"
-        success "Existing volume backed up to: $backup_path"
-    else
-        warn "Existing volume will be replaced: $volume_path"
-        if [ "${FORCE:-false}" != "true" ]; then
-            read -p "Continue? (y/N): " -n 1 -r
-            echo
-            if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-                error "Restore cancelled by user"
-            fi
-        fi
-        
-        info "Removing existing volume..."
-        rm -rf "$volume_path"
-        success "Existing volume removed"
-    fi
-}
-
-restore_archive() {
-    local archive=$1
-    local volume_path=$2
-    local service=$3
-    
-    info "Restoring from archive: $(basename "$archive")"
-    
-    # Get parent directory and target name
-    local parent_dir=$(dirname "$volume_path")
-    local target_name=$(basename "$volume_path")
-    
-    # Ensure parent directory exists
-    mkdir -p "$parent_dir"
-    
-    # Extract archive
-    info "Extracting to: $volume_path"
-    if ! tar -xzf "$archive" -C "$parent_dir"; then
-        error "Failed to extract backup archive"
-    fi
-    
-    # Verify restoration
-    if [ -e "$volume_path" ]; then
-        local size=$(du -sh "$volume_path" | cut -f1)
-        success "Restore complete! Volume size: $size"
-    else
-        error "Restore verification failed: $volume_path does not exist after extraction"
-    fi
-}
-
-show_post_restore_info() {
-    local service=$1
+confirm_restore() {
+    local volume=$1
+    local path=$2
+    local archive=$3
     
     echo ""
-    info "Restore completed for: $service"
+    warn "WARNING: This will replace the current ${volume} data!"
     echo ""
-    info "Next steps:"
-    info "  1. Start the service:"
-    info "     docker compose -f compose/docker-compose.<module>.yml start $service"
-    echo ""
-    info "  2. Verify the service works correctly:"
-    info "     docker compose -f compose/docker-compose.<module>.yml logs -f $service"
-    echo ""
-    info "  3. Access the service and check configuration"
+    info "Volume:       ${volume}"
+    info "Current path: ${path}"
+    info "Backup file:  $(basename "${archive}")"
+    info "Backup size:  $(du -h "${archive}" | cut -f1)"
     echo ""
     
-    if [ "${KEEP_BACKUP:-false}" = "true" ]; then
-        info "  4. Once verified, you can remove the old backup:"
-        info "     rm -rf ${CRITICAL_VOLUMES[$service]}.backup-*"
-        echo ""
-    fi
-}
-
-# ============================================================================
-# Main
-# ============================================================================
-
-main() {
-    echo ""
-    echo "╔════════════════════════════════════════════════════════════╗"
-    echo "║  Orion-Sentinel-CoreSrv Volume Restore                     ║"
-    echo "╚════════════════════════════════════════════════════════════╝"
-    echo ""
+    read -p "Are you sure you want to proceed? (yes/no): " confirm
     
-    # Handle help flag
-    if [ "${1:-}" = "-h" ] || [ "${1:-}" = "--help" ] || [ $# -lt 3 ]; then
-        show_help
+    if [[ "${confirm}" != "yes" ]]; then
+        info "Restore cancelled"
         exit 0
     fi
+}
+
+stop_related_containers() {
+    local volume=$1
     
-    # Parse arguments
-    local backup_mode=$1
-    local backup_date=$2
-    local service=$3
+    info "Stopping related containers..."
     
-    # Parse options
-    export FORCE=false
-    export KEEP_BACKUP=false
-    shift 3
-    while [ $# -gt 0 ]; do
-        case $1 in
-            --force) FORCE=true ;;
-            --keep-backup) KEEP_BACKUP=true ;;
-            *) warn "Unknown option: $1" ;;
-        esac
-        shift
-    done
+    # Determine which compose file to use based on volume prefix
+    local compose_file=""
     
-    info "Restore configuration:"
-    info "  Backup mode: $backup_mode"
-    info "  Backup date: $backup_date"
-    info "  Service: $service"
-    info "  Force: $FORCE"
-    info "  Keep backup: $KEEP_BACKUP"
-    echo ""
+    case "${volume}" in
+        core-*)
+            compose_file="compose/docker-compose.gateway.yml"
+            ;;
+        media-*)
+            compose_file="compose/docker-compose.media.yml"
+            ;;
+        monitoring-*)
+            compose_file="compose/docker-compose.observability.yml"
+            ;;
+        homeauto-*)
+            compose_file="compose/docker-compose.homeauto.yml"
+            ;;
+        search-*|maintenance-*)
+            warn "No specific compose file for ${volume}, skipping container stop"
+            return 0
+            ;;
+    esac
     
-    # Validate service
-    if [ -z "${CRITICAL_VOLUMES[$service]:-}" ]; then
-        error "Unknown service: $service (use --help to see available services)"
+    if [[ -n "${compose_file}" ]] && [[ -f "${compose_file}" ]]; then
+        docker compose -f "${compose_file}" down 2>/dev/null || true
+        success "Containers stopped"
+    fi
+}
+
+backup_current_data() {
+    local volume=$1
+    local path=$2
+    
+    if [[ ! -d "${path}" ]]; then
+        info "No existing data to backup"
+        return 0
     fi
     
-    local volume_path=${CRITICAL_VOLUMES[$service]}
+    local backup_name="${path}.backup-$(date +%Y%m%d-%H%M%S)"
     
-    check_requirements
+    info "Backing up current data to: ${backup_name}"
     
-    # Find backup archive
-    local archive=$(find_backup_archive "$backup_mode" "$backup_date" "$service")
-    local archive_size=$(du -h "$archive" | cut -f1)
+    mv "${path}" "${backup_name}"
     
-    success "Found backup archive: $(basename "$archive") ($archive_size)"
-    echo ""
+    success "Current data backed up"
+}
+
+restore_volume() {
+    local volume=$1
+    local path=$2
+    local archive=$3
     
-    # Check if service is running
-    check_service_running "$service"
+    info "Restoring ${volume}..."
     
-    # Backup existing volume
-    backup_existing_volume "$volume_path" "$service"
+    # Create parent directory if it doesn't exist
+    mkdir -p "$(dirname "${path}")"
     
-    # Restore from archive
-    echo ""
-    restore_archive "$archive" "$volume_path" "$service"
+    # Extract archive
+    local parent_dir="$(dirname "${path}")"
+    local volume_basename="$(basename "${path}")"
     
-    # Show post-restore information
-    show_post_restore_info "$service"
+    if tar -xzf "${archive}" -C "${parent_dir}" 2>/dev/null; then
+        success "Volume restored successfully"
+    else
+        error "Failed to extract backup archive"
+    fi
+}
+
+start_containers() {
+    local volume=$1
+    
+    info "Starting containers..."
+    
+    # Determine which compose file to use
+    local compose_file=""
+    
+    case "${volume}" in
+        core-*)
+            compose_file="compose/docker-compose.gateway.yml"
+            ;;
+        media-*)
+            compose_file="compose/docker-compose.media.yml"
+            ;;
+        monitoring-*)
+            compose_file="compose/docker-compose.observability.yml"
+            ;;
+        homeauto-*)
+            compose_file="compose/docker-compose.homeauto.yml"
+            ;;
+        *)
+            warn "No specific compose file for ${volume}, skipping container start"
+            return 0
+            ;;
+    esac
+    
+    if [[ -n "${compose_file}" ]] && [[ -f "${compose_file}" ]]; then
+        docker compose -f "${compose_file}" up -d 2>/dev/null || true
+        success "Containers started"
+    fi
+}
+
+################################################################################
+# MAIN
+################################################################################
+
+main() {
+    # Check arguments
+    if [[ $# -lt 2 ]]; then
+        usage
+    fi
+    
+    local volume=$1
+    local backup_date=$2
+    local backup_base="${3:-/srv/backups/orion}"
     
     echo ""
     echo "╔════════════════════════════════════════════════════════════╗"
-    echo "║  Restore completed successfully!                           ║"
+    echo "║  Orion Sentinel CoreSrv - Volume Restore                   ║"
     echo "╚════════════════════════════════════════════════════════════╝"
+    echo ""
+    
+    check_root
+    validate_volume "${volume}"
+    
+    local path="${VOLUME_PATHS[$volume]}"
+    local archive=$(find_backup_archive "${volume}" "${backup_date}" "${backup_base}")
+    
+    confirm_restore "${volume}" "${path}" "${archive}"
+    
+    echo ""
+    stop_related_containers "${volume}"
+    
+    echo ""
+    backup_current_data "${volume}" "${path}"
+    
+    echo ""
+    restore_volume "${volume}" "${path}" "${archive}"
+    
+    echo ""
+    start_containers "${volume}"
+    
+    echo ""
+    success "Restore completed successfully!"
+    echo ""
+    info "Volume ${volume} has been restored from backup"
+    info "Previous data backed up with .backup-* suffix if it existed"
     echo ""
 }
 
