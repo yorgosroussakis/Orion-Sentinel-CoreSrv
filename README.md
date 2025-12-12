@@ -765,6 +765,243 @@ Mount NAS/SAN for media:
 MEDIA_ROOT=/mnt/nas/media
 ```
 
+## Storage & Replication (Dell Deployment)
+
+For Dell OptiPlex deployments with external Samsung SSDs, Orion Sentinel supports a two-tier storage model with automatic replication.
+
+### Storage Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                       DELL STORAGE ARCHITECTURE                         │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                         │
+│  Internal Disk                    External SSDs                         │
+│  (/srv/orion/internal)            (Samsung 4TB x2)                      │
+│  ┌───────────────────┐            ┌────────────────────────────────────┐│
+│  │ • appdata/        │            │ Master (/mnt/SMSNG4T1)             ││
+│  │ • db/             │            │  └─ /srv/orion/external_primary    ││
+│  │ • observability/  │            │      • media/                      ││
+│  │ • config-snapshots│            │      • cameras/                    ││
+│  └───────────────────┘            │      • backups/                    ││
+│         │                         │      • internal-mirror/            ││
+│         │                         ├────────────────────────────────────┤│
+│         │                         │ Replica (/mnt/SMSNG4T2)            ││
+│         └─────────────────────────│  └─ /srv/orion/external_replica    ││
+│           Mirrored to backup      │      (mirror of master)            ││
+│                                   └────────────────────────────────────┘│
+│                                              ↑                          │
+│                                        Nightly rsync                    │
+│                                        (systemd timer)                  │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+### Mountpoints
+
+| Path | Description | Physical Location |
+|------|-------------|-------------------|
+| `/mnt/SMSNG4T1` | Master SSD mount | External Samsung SSD 1 |
+| `/mnt/SMSNG4T2` | Replica SSD mount | External Samsung SSD 2 |
+| `/srv/orion/internal` | Internal storage root | Internal disk |
+| `/srv/orion/external_primary` | Bind mount to master | → `/mnt/SMSNG4T1/orion` |
+| `/srv/orion/external_replica` | Bind mount to replica | → `/mnt/SMSNG4T2/orion` |
+
+### Quick Setup
+
+```bash
+# 1. Ensure external SSDs are mounted (add to /etc/fstab)
+sudo blkid  # Find UUIDs
+# Add to /etc/fstab:
+# UUID=<master-uuid> /mnt/SMSNG4T1 ext4 defaults,nofail 0 2
+# UUID=<replica-uuid> /mnt/SMSNG4T2 ext4 defaults,nofail 0 2
+sudo mount -a
+
+# 2. Bootstrap storage directories and bind mounts
+sudo ./scripts/bootstrap-storage.sh --install-fstab
+
+# 3. Configure environment
+cp .env.example .env
+# Edit .env to set ORION_* variables
+
+# 4. Test replication
+./scripts/replicate-external.sh --dry-run
+
+# 5. Install systemd timer for automatic nightly replication
+sudo ./scripts/install-systemd.sh
+```
+
+### Verification
+
+```bash
+# Check mounts
+findmnt | grep -E 'SMSNG4T|external_primary|external_replica'
+
+# Check disk usage
+df -h /srv/orion/external_primary /srv/orion/external_replica
+
+# Check timer status
+systemctl list-timers | grep orion-replica
+
+# View replication logs
+tail -50 /srv/orion/external_primary/backups/replication/replica-sync.log
+```
+
+### Environment Variables (Dell Deployment)
+
+Add these to your `.env` for Dell deployment:
+
+```bash
+# Storage roots
+ORION_INTERNAL_ROOT=/srv/orion/internal
+ORION_EXTERNAL_PRIMARY=/srv/orion/external_primary
+ORION_EXTERNAL_REPLICA=/srv/orion/external_replica
+
+# Derived paths (on external SSD)
+ORION_MEDIA_DIR=${ORION_EXTERNAL_PRIMARY}/media
+ORION_CAMERAS_DIR=${ORION_EXTERNAL_PRIMARY}/cameras
+ORION_BACKUPS_DIR=${ORION_EXTERNAL_PRIMARY}/backups
+
+# Map compose variables to Dell storage
+GATEWAY_CONFIG_ROOT=${ORION_INTERNAL_ROOT}/appdata/gateway
+MEDIA_CONFIG_ROOT=${ORION_INTERNAL_ROOT}/appdata/media
+HOMEAUTO_CONFIG_ROOT=${ORION_INTERNAL_ROOT}/appdata/homeauto
+OBSERVABILITY_CONFIG_ROOT=${ORION_INTERNAL_ROOT}/observability
+MEDIA_ROOT=${ORION_MEDIA_DIR}
+```
+
+### Safety Notes
+
+⚠️ **The replication script will ABORT if mounts are missing** - This prevents accidentally syncing into the root filesystem if external SSDs are disconnected.
+
+📋 **fstab entries are added idempotently** - Running `bootstrap-storage.sh --install-fstab` multiple times won't create duplicate entries.
+
+🔄 **Replication is one-way (master → replica)** - Changes on the replica will be overwritten on the next sync.
+
+## Dell Traefik Deployment (orion.lan)
+
+This section describes deploying all services behind Traefik with the `orion.lan` domain using Pi-hole Local DNS.
+
+### Service Endpoints
+
+| Service | URL | Description |
+|---------|-----|-------------|
+| Portal | https://portal.orion.lan | Homepage dashboard |
+| Grafana | https://grafana.orion.lan | Monitoring dashboards |
+| Prometheus | https://prometheus.orion.lan | Metrics collection |
+| Uptime Kuma | https://uptime.orion.lan | Status monitoring |
+| Home Assistant | https://home.orion.lan | Smart home hub |
+| Zigbee2MQTT | https://zigbee.orion.lan | Zigbee gateway |
+| Mealie | https://mealie.orion.lan | Recipe management |
+| DSMR Reader | https://dsmr.orion.lan | Energy monitoring |
+| Traefik | https://traefik.orion.lan | Reverse proxy dashboard |
+
+### Pi-hole Local DNS Setup
+
+Configure Pi-hole to resolve all `*.orion.lan` subdomains to your Dell server IP:
+
+1. **Open Pi-hole Admin** → Local DNS → DNS Records
+
+2. **Add wildcard CNAME record:**
+   - This method requires adding each subdomain individually in Pi-hole
+
+3. **Add A records for each service:**
+   ```
+   portal.orion.lan     → 192.168.1.100  # Replace with Dell IP
+   grafana.orion.lan    → 192.168.1.100
+   prometheus.orion.lan → 192.168.1.100
+   uptime.orion.lan     → 192.168.1.100
+   home.orion.lan       → 192.168.1.100
+   zigbee.orion.lan     → 192.168.1.100
+   mealie.orion.lan     → 192.168.1.100
+   dsmr.orion.lan       → 192.168.1.100
+   traefik.orion.lan    → 192.168.1.100
+   mqtt.orion.lan       → 192.168.1.100
+   ```
+
+4. **Alternative: Use dnsmasq wildcard** (advanced):
+   Add to `/etc/dnsmasq.d/02-orion.conf` on Pi-hole:
+   ```
+   address=/orion.lan/192.168.1.100
+   ```
+
+### Quick Deployment
+
+```bash
+# 1. Bootstrap storage (if not done)
+sudo ./scripts/bootstrap-storage.sh --install-fstab
+
+# 2. Configure environment
+cp .env.example .env
+# Set LOCAL_DOMAIN=orion.lan in .env
+
+# 3. Copy config files
+cp -r config/traefik/* ${ORION_INTERNAL_ROOT}/appdata/traefik/
+cp -r config/ha-proxy/* ${ORION_INTERNAL_ROOT}/appdata/ha-proxy/
+cp -r config/prometheus/* ${ORION_INTERNAL_ROOT}/observability/prometheus/
+cp -r config/loki/* ${ORION_INTERNAL_ROOT}/observability/loki/
+cp -r config/promtail/* ${ORION_INTERNAL_ROOT}/observability/promtail/
+cp -r config/grafana/provisioning/* ${ORION_INTERNAL_ROOT}/observability/grafana/provisioning/
+cp -r config/mosquitto/* ${ORION_INTERNAL_ROOT}/appdata/mosquitto/
+
+# 4. Start stacks in order
+./scripts/orionctl up ingress
+./scripts/orionctl up observability
+./scripts/orionctl up home
+./scripts/orionctl up apps
+./scripts/orionctl up portal
+
+# 5. Verify deployment
+./scripts/orionctl ps
+curl -k https://portal.orion.lan
+```
+
+### Home Assistant Host Networking
+
+Home Assistant runs with `network_mode: host` for device discovery (mDNS, Bluetooth, etc.). Since Traefik cannot route directly to host-network containers, we use an nginx proxy (`ha-proxy`) as an intermediary:
+
+```
+Client → Traefik → ha-proxy → Home Assistant (host:8123)
+```
+
+Home Assistant is also directly accessible at `http://<dell-ip>:8123`.
+
+### Automated Backups
+
+Database backups run automatically via systemd timers:
+
+| Schedule | Retention | Command |
+|----------|-----------|---------|
+| Daily @ 3:00 AM | 7 days | `./scripts/orion-backup.sh` |
+| Weekly @ 4:00 AM (Sun) | 30 days | `./scripts/orion-backup.sh --weekly` |
+
+Install backup timers:
+```bash
+sudo cp systemd/orion-backup-*.{service,timer} /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now orion-backup-daily.timer
+sudo systemctl enable --now orion-backup-weekly.timer
+```
+
+Backup location: `${ORION_BACKUPS_DIR}/db/`
+
+### Stack Files
+
+The modular stack architecture:
+
+```
+stacks/
+├── ingress/
+│   └── traefik.yaml      # Traefik reverse proxy
+├── observability/
+│   └── stack.yaml        # Grafana, Prometheus, Loki, etc.
+├── home/
+│   └── stack.yaml        # Home Assistant, Mosquitto, Zigbee2MQTT
+├── apps/
+│   └── stack.yaml        # Mealie, DSMR Reader
+└── portal/
+    └── stack.yaml        # Homepage dashboard
+```
+
 ## Documentation
 
 ### Getting Started
