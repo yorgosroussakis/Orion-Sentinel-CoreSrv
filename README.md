@@ -207,19 +207,28 @@ Media + Reverse Proxy + Monitoring + Home Automation:
 make up-full
 ```
 
-### Camera NVR (Frigate)
+### Orion Camera NVR (Frigate)
 
-Network Video Recorder for RTSP cameras (Tapo C220/C210, etc.):
+Network Video Recorder for RTSP cameras (Tapo C220/C210, etc.) with object detection.
+
+**Purpose:** Records video from Tapo and other RTSP cameras, provides object detection (person, car, etc.), and integrates with Home Assistant via MQTT.
+
+**Config files:** `config/frigate/`
 
 ```bash
-# 1. Create Frigate config
+# 1. Create Frigate config from template
 cp config/frigate/config.example.yml config/frigate/config.yml
 
 # 2. Edit config with your camera IPs and credentials
 nano config/frigate/config.yml
 
-# 3. Start NVR
+# 3. Set storage path in .env (point to SSD with sufficient space)
+# ORION_CCTV_MEDIA_DIR=/mnt/orion-cctv
+
+# 4. Start NVR
 make up-nvr
+# Or directly:
+docker compose -f stacks/home/cam_nvr.compose.yml up -d
 ```
 
 **Access Frigate:**
@@ -230,10 +239,27 @@ make up-nvr
 **Setting up Tapo cameras:**
 1. Open Tapo app → Camera Settings → Advanced Settings → Camera Account
 2. Create a username and password (this is different from your Tapo account)
-3. Use these credentials in `config/frigate/config.yml`
-4. RTSP URLs: `rtsp://USER:PASS@CAMERA_IP:554/stream1` (1080p) or `stream2` (360p)
+3. Edit `config/frigate/config.yml` with your camera details:
+   - Replace `<CAMERA_IP>` with your camera's IP address
+   - Replace `<TAPO_USER>` and `<TAPO_PASS>` with the camera account credentials
+4. RTSP URLs:
+   - `rtsp://USER:PASS@IP:554/stream1` - 1080p (for recording)
+   - `rtsp://USER:PASS@IP:554/stream2` - 360p (for detection, uses less CPU)
 
-See `config/frigate/config.example.yml` for detailed configuration options.
+**MQTT Integration (optional):**
+To enable Home Assistant integration, set in `.env`:
+```bash
+FRIGATE_MQTT_HOST=orion_mosquitto  # If using the home stack
+FRIGATE_MQTT_USER=frigate
+FRIGATE_MQTT_PASSWORD=your_password
+```
+Then enable MQTT in `config/frigate/config.yml`.
+
+**Hardware acceleration (optional):**
+- Intel QSV: Uncomment `/dev/dri` device in `stacks/home/cam_nvr.compose.yml`
+- Coral TPU: Uncomment USB device mapping and coral detector in config
+
+See `config/frigate/config.example.yml` for all configuration options.
 
 ## Configuration Guide
 

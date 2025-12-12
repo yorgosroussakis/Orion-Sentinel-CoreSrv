@@ -1,252 +1,117 @@
 # ============================================================================
-# Frigate NVR Configuration - Orion-Sentinel-CoreSrv
+# Frigate NVR Configuration Template - Orion-Sentinel-CoreSrv
 # ============================================================================
 #
 # SETUP INSTRUCTIONS:
 # 1. Copy this file: cp config.example.yml config.yml
 # 2. Replace placeholder values:
-#    - CAMERA_IP: Your Tapo camera's IP address (e.g., 192.168.1.100)
-#    - TAPO_USER: Camera account username (set in Tapo app under Camera Settings > Advanced > Camera Account)
-#    - TAPO_PASS: Camera account password (set in Tapo app)
-# 3. Adjust settings for your setup (fps, resolution, retention, etc.)
+#    - <CAMERA_IP>: Your Tapo camera's IP (e.g., 192.168.1.100)
+#    - <TAPO_USER>: Camera account username
+#    - <TAPO_PASS>: Camera account password
+# 3. Repeat for each camera you want to add
 #
-# TAPO CAMERA RTSP URLs:
-#   - High quality (1080p): rtsp://USER:PASS@CAMERA_IP:554/stream1
-#   - Low quality (360p):   rtsp://USER:PASS@CAMERA_IP:554/stream2
+# TAPO CAMERA SETUP:
+#   Open Tapo app → Camera Settings → Advanced Settings → Camera Account
+#   Create a username and password (this is separate from your Tapo account)
 #
-# IMPORTANT: You must enable "Camera Account" in the Tapo app:
-#   Tapo App → Camera Settings → Advanced Settings → Camera Account
-#   This creates a separate RTSP username/password for streaming.
+# RTSP URL FORMAT:
+#   - High quality (1080p): rtsp://USER:PASS@IP:554/stream1
+#   - Low quality (360p):   rtsp://USER:PASS@IP:554/stream2
 #
-# For more configuration options, see:
-# https://docs.frigate.video/configuration/
-#
+# For more options: https://docs.frigate.video/configuration/
 # ============================================================================
 
-# MQTT integration (optional but recommended for Home Assistant)
-# Frigate works without MQTT, but MQTT enables:
-# - Real-time event notifications
-# - Home Assistant integration
-# - External automation triggers
+# MQTT (optional - enables Home Assistant integration)
 mqtt:
-  # Set to your MQTT broker hostname (use 'orion_mosquitto' if using homeauto module)
-  # Leave empty or remove this section to disable MQTT
   enabled: false
+  # Uncomment to enable MQTT:
   # host: orion_mosquitto
   # port: 1883
   # user: "{FRIGATE_MQTT_USER}"
   # password: "{FRIGATE_MQTT_PASSWORD}"
-  # topic_prefix: frigate
-  # client_id: frigate
 
-# ============================================================================
-# DETECTORS - Object detection configuration
-# ============================================================================
-# CPU detection works out of the box, but is slower.
-# For better performance, consider adding a Coral TPU.
+# Object detection (CPU by default)
 detectors:
-  # CPU detector (default, no extra hardware needed)
   cpu1:
     type: cpu
     num_threads: 2
-
-  # CORAL USB ACCELERATOR (uncomment to enable)
-  # Provides ~10x faster detection than CPU
+  # Coral TPU (uncomment to enable):
   # coral:
   #   type: edgetpu
   #   device: usb
 
-  # CORAL PCIe/M.2 (uncomment to enable)
-  # coral:
-  #   type: edgetpu
-  #   device: pci
-
-# ============================================================================
-# FFMPEG - Global transcoding settings
-# ============================================================================
-ffmpeg:
-  # Hardware acceleration (uncomment for Intel QSV)
-  # hwaccel_args: preset-vaapi
-  # For NVIDIA (requires nvidia-docker):
-  # hwaccel_args: preset-nvidia-h264
-
-  # Output arguments for recordings
-  output_args:
-    record: preset-record-generic-audio-aac
-
-# ============================================================================
-# RECORDING - Global recording settings
-# ============================================================================
+# Recording settings
 record:
   enabled: true
-  # Retain all recordings for 7 days by default
   retain:
     days: 7
     mode: all
-  # Event-based retention: keep recordings with detections longer
-  events:
-    # Keep 30 days of recordings that contain objects
-    retain:
-      default: 30
-      mode: motion
 
-# ============================================================================
-# SNAPSHOTS - Image capture on events
-# ============================================================================
+# Snapshot settings
 snapshots:
   enabled: true
-  # Crop to detected object
-  crop: true
-  # Save full frame as well
-  bounding_box: true
-  # Retain snapshots for 14 days
   retain:
     default: 14
 
-# ============================================================================
-# DETECTION - Object detection settings
-# ============================================================================
+# Detection settings
 detect:
-  # Enable object detection
   enabled: true
-  # Detection runs at 5 fps (balance between accuracy and performance)
   fps: 5
-  # Detection resolution (lower is faster, but less accurate)
   width: 1280
   height: 720
 
-# ============================================================================
-# OBJECTS - What to detect
-# ============================================================================
+# Objects to detect
 objects:
   track:
     - person
     - car
     - dog
     - cat
-  filters:
-    person:
-      # Minimum detection confidence (0.0 - 1.0)
-      min_score: 0.5
-      # Minimum area (pixels) to track
-      min_area: 5000
-      # Maximum area (pixels) to track
-      max_area: 100000
-    car:
-      min_score: 0.5
-      min_area: 10000
 
 # ============================================================================
-# CAMERAS - Define your cameras here
+# CAMERAS - Configure your cameras below
 # ============================================================================
-# Each camera needs:
-#   - A unique name (no spaces, use underscores)
-#   - RTSP path for the main (recording) stream
-#   - RTSP path for the detect (lower res) stream
-#
-# TAPO cameras have two streams:
-#   stream1 = Main stream (1080p or highest resolution)
-#   stream2 = Sub stream (360p, ideal for detection)
-
 cameras:
-  # ----- EXAMPLE CAMERA 1: Living Room -----
-  # Replace CAMERA_IP, TAPO_USER, and TAPO_PASS with your values
-  living_room_tapo:
+  # ---- EXAMPLE: Living Room Camera ----
+  # Replace <TAPO_USER>, <TAPO_PASS>, <CAMERA_IP> with your values
+  living_room:
     enabled: true
     ffmpeg:
       inputs:
-        # Main stream for recording (1080p)
-        - path: rtsp://TAPO_USER:TAPO_PASS@CAMERA_IP:554/stream1
+        - path: rtsp://<TAPO_USER>:<TAPO_PASS>@<CAMERA_IP>:554/stream1
           roles:
             - record
-        # Sub stream for detection (360p, less CPU intensive)
-        - path: rtsp://TAPO_USER:TAPO_PASS@CAMERA_IP:554/stream2
+        - path: rtsp://<TAPO_USER>:<TAPO_PASS>@<CAMERA_IP>:554/stream2
           roles:
             - detect
-    # Camera-specific detection settings (optional, inherits global if not set)
     detect:
-      enabled: true
       width: 640
       height: 360
       fps: 5
-    # Camera-specific recording settings (optional)
-    record:
-      enabled: true
-    # Define motion detection zones (optional)
-    # motion:
-    #   mask:
-    #     # Mask out areas with constant motion (trees, etc.)
-    #     - 0,0,200,0,200,200,0,200
 
-  # ----- EXAMPLE CAMERA 2: Front Door -----
-  # Uncomment and configure for a second camera
-  # front_door_tapo:
+  # ---- Add more cameras below ----
+  # front_door:
   #   enabled: true
   #   ffmpeg:
   #     inputs:
-  #       - path: rtsp://TAPO_USER:TAPO_PASS@CAMERA_IP:554/stream1
+  #       - path: rtsp://<TAPO_USER>:<TAPO_PASS>@<CAMERA_IP>:554/stream1
   #         roles:
   #           - record
-  #       - path: rtsp://TAPO_USER:TAPO_PASS@CAMERA_IP:554/stream2
+  #       - path: rtsp://<TAPO_USER>:<TAPO_PASS>@<CAMERA_IP>:554/stream2
   #         roles:
   #           - detect
-  #   detect:
-  #     enabled: true
-  #     width: 640
-  #     height: 360
-  #     fps: 5
-  #   record:
-  #     enabled: true
-  #   # Object filter specific to this camera (e.g., ignore pets at front door)
-  #   objects:
-  #     track:
-  #       - person
-  #       - car
 
-  # ----- ADDITIONAL CAMERAS -----
-  # Copy the template above for each additional camera
-  # Make sure each camera has a unique name
-
-# ============================================================================
-# UI / WEB INTERFACE
-# ============================================================================
-ui:
-  # Live view settings
-  live:
-    # Stream method: mse (low latency), webrtc (lowest latency), jsmpeg (most compatible)
-    stream_name: mse
-  # Time format
-  time_format: browser
-
-# ============================================================================
-# BIRDSEYE - Multi-camera overview
-# ============================================================================
-birdseye:
-  enabled: true
-  # Show cameras with activity
-  mode: continuous
-  # Resolution of birdseye view
-  width: 1920
-  height: 1080
-
-# ============================================================================
-# GO2RTC - RTSP restreaming
-# ============================================================================
-# Frigate includes go2rtc for efficient RTSP restreaming
-# Access restreams at: rtsp://frigate-host:8554/camera_name
+# RTSP restreaming
 go2rtc:
   streams:
-    living_room_tapo:
-      - rtsp://TAPO_USER:TAPO_PASS@CAMERA_IP:554/stream1
-    # front_door_tapo:
-    #   - rtsp://TAPO_USER:TAPO_PASS@CAMERA_IP:554/stream1
+    living_room:
+      - rtsp://<TAPO_USER>:<TAPO_PASS>@<CAMERA_IP>:554/stream1
 
-# ============================================================================
-# LOGGER - Logging configuration
-# ============================================================================
+# Multi-camera overview
+birdseye:
+  enabled: true
+  mode: continuous
+
+# Logging
 logger:
   default: info
-  # Enable debug logging for specific components if troubleshooting
-  # logs:
-  #   frigate.record: debug
-  #   frigate.video: debug

@@ -1,28 +1,18 @@
-# Orion-Sentinel-CoreSrv NVR Module (Frigate)
+# Orion-Sentinel-CoreSrv Camera NVR Stack (Frigate)
 # Network Video Recorder for RTSP cameras (Tapo C220/C210, etc.)
 #
-# This module provides video recording and object detection:
-#   - Frigate NVR: Recording, detection, events, and live view
-#
 # Usage:
-#   ./scripts/orionctl up nvr
-#
-# Direct docker compose:
-#   docker compose -f compose/docker-compose.nvr.yml up -d
+#   docker compose -f stacks/home/cam_nvr.compose.yml up -d
 #
 # Prerequisites:
-#   1. Create Frigate config: cp config/frigate/config.example.yml config/frigate/config.yml
+#   1. Copy config template: cp config/frigate/config.example.yml config/frigate/config.yml
 #   2. Edit config/frigate/config.yml with your camera IPs and credentials
 #   3. Set ORION_CCTV_MEDIA_DIR in .env to a path with sufficient storage
 #
-# Ports:
-#   5000 - Frigate WebUI
-#   8554 - RTSP restream
-#   8555 - WebRTC
-#
-# Hardware acceleration (optional):
-#   - Intel QSV: Uncomment the devices section for /dev/dri
-#   - Coral TPU: Uncomment the devices section for USB Coral
+# Exposed at:
+#   - frigate.orion.lan (via Traefik)
+#   - localhost:5000 (direct access)
+#   - rtsp://localhost:8554/<camera_name> (RTSP restream)
 #
 # Storage recommendation:
 #   Mount a large SSD at ${ORION_CCTV_MEDIA_DIR} (default: /mnt/orion-cctv)
@@ -43,6 +33,7 @@ services:
     environment:
       - TZ=${TZ:-Europe/Amsterdam}
       # MQTT configuration (optional - Frigate works without MQTT)
+      # These are passed to Frigate; actual config is in config/frigate/config.yml
       - FRIGATE_MQTT_HOST=${FRIGATE_MQTT_HOST:-}
       - FRIGATE_MQTT_USER=${FRIGATE_MQTT_USER:-}
       - FRIGATE_MQTT_PASSWORD=${FRIGATE_MQTT_PASSWORD:-}
@@ -50,15 +41,9 @@ services:
       - FRIGATE_RTSP_PASSWORD=${FRIGATE_RTSP_PASSWORD:-}
     volumes:
       # Frigate configuration (required)
-      - ${NVR_CONFIG_ROOT:-./config/frigate}:/config
+      - ${ORION_INTERNAL_ROOT:-/srv/orion/internal}/appdata/frigate:/config
       # Recordings and clips storage (should be on large SSD)
       - ${ORION_CCTV_MEDIA_DIR:-/mnt/orion-cctv}:/media/frigate
-      # Optional: tmpfs for cache (improves performance, reduces SSD wear)
-      # Uncomment if you want to use tmpfs for cache:
-      # - type: tmpfs
-      #   target: /tmp/cache
-      #   tmpfs:
-      #     size: 1000000000  # 1GB
     ports:
       # WebUI
       - "5000:5000"
@@ -68,7 +53,7 @@ services:
       - "8555:8555/tcp"
       - "8555:8555/udp"
     networks:
-      - orion_nvr_net
+      - orion_home
       - orion_proxy
     security_opt:
       - no-new-privileges:true
@@ -82,21 +67,21 @@ services:
     # devices:
     #   - /dev/apex_0:/dev/apex_0
     healthcheck:
-      test: ["CMD-SHELL", "wget -q --spider http://localhost:5000/api/version || exit 1"]
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:5000/api/version"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 60s
     labels:
-      # Traefik labels for reverse proxy (requires gateway module)
+      # Traefik labels for reverse proxy
       - "traefik.enable=true"
       - "traefik.http.routers.frigate.rule=Host(`frigate.${LOCAL_DOMAIN:-orion.lan}`)"
       - "traefik.http.routers.frigate.entrypoints=websecure"
       - "traefik.http.routers.frigate.tls=true"
       - "traefik.http.routers.frigate.middlewares=security-headers@file"
       - "traefik.http.services.frigate.loadbalancer.server.port=5000"
-      # Promtail/Loki log collection labels (for observability integration)
-      - "orion.stack=nvr"
+      # Promtail/Loki log collection labels
+      - "orion.stack=home"
       - "orion.service=frigate"
     logging:
       driver: json-file
@@ -109,10 +94,9 @@ services:
 ############################
 
 networks:
-  orion_nvr_net:
-    name: orion_nvr_net
+  orion_home:
+    name: orion_home
     driver: bridge
-  # Proxy network for Traefik routing (external)
   orion_proxy:
     name: orion_proxy
     external: true
