@@ -1,0 +1,102 @@
+# Orion-Sentinel-CoreSrv Camera NVR Stack (Frigate)
+# Network Video Recorder for RTSP cameras (Tapo C220/C210, etc.)
+#
+# Usage:
+#   docker compose -f stacks/home/cam_nvr.compose.yml up -d
+#
+# Prerequisites:
+#   1. Copy config template: cp config/frigate/config.example.yml config/frigate/config.yml
+#   2. Edit config/frigate/config.yml with your camera IPs and credentials
+#   3. Set ORION_CCTV_MEDIA_DIR in .env to a path with sufficient storage
+#
+# Exposed at:
+#   - frigate.orion.lan (via Traefik)
+#   - localhost:5000 (direct access)
+#   - rtsp://localhost:8554/<camera_name> (RTSP restream)
+#
+# Storage recommendation:
+#   Mount a large SSD at ${ORION_CCTV_MEDIA_DIR} (default: /mnt/orion-cctv)
+#   1TB+ recommended for multi-camera 24/7 recording
+
+services:
+  ############################
+  # FRIGATE: Network Video Recorder
+  ############################
+
+  orion-frigate:
+    image: ghcr.io/blakeblackshear/frigate:stable
+    container_name: orion_frigate
+    restart: unless-stopped
+    # shm_size is used for frame buffer; increase if you have many high-res cameras
+    # 64mb per camera is a good baseline, 256mb should handle 3-4 1080p cameras
+    shm_size: ${FRIGATE_SHM_SIZE:-256mb}
+    environment:
+      - TZ=${TZ:-Europe/Amsterdam}
+      # MQTT configuration (optional - Frigate works without MQTT)
+      # These are passed to Frigate; actual config is in config/frigate/config.yml
+      - FRIGATE_MQTT_HOST=${FRIGATE_MQTT_HOST:-}
+      - FRIGATE_MQTT_USER=${FRIGATE_MQTT_USER:-}
+      - FRIGATE_MQTT_PASSWORD=${FRIGATE_MQTT_PASSWORD:-}
+      # Internal RTSP password for restream authentication (optional)
+      - FRIGATE_RTSP_PASSWORD=${FRIGATE_RTSP_PASSWORD:-}
+    volumes:
+      # Frigate configuration (required)
+      - ${ORION_INTERNAL_ROOT:-/srv/orion/internal}/appdata/frigate:/config
+      # Recordings and clips storage (should be on large SSD)
+      - ${ORION_CCTV_MEDIA_DIR:-/mnt/orion-cctv}:/media/frigate
+    ports:
+      # WebUI
+      - "5000:5000"
+      # RTSP restream feeds
+      - "8554:8554"
+      # WebRTC
+      - "8555:8555/tcp"
+      - "8555:8555/udp"
+    networks:
+      - orion_home
+      - orion_proxy
+    security_opt:
+      - no-new-privileges:true
+    # Hardware acceleration for Intel QSV (uncomment if you have Intel GPU)
+    # devices:
+    #   - /dev/dri:/dev/dri
+    # Hardware acceleration for Coral TPU (uncomment if you have USB Coral)
+    # devices:
+    #   - /dev/bus/usb:/dev/bus/usb
+    # For PCIe/M.2 Coral:
+    # devices:
+    #   - /dev/apex_0:/dev/apex_0
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:5000/api/version"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    labels:
+      # Traefik labels for reverse proxy
+      - "traefik.enable=true"
+      - "traefik.http.routers.frigate.rule=Host(`frigate.${LOCAL_DOMAIN:-orion.lan}`)"
+      - "traefik.http.routers.frigate.entrypoints=websecure"
+      - "traefik.http.routers.frigate.tls=true"
+      - "traefik.http.routers.frigate.middlewares=security-headers@file"
+      - "traefik.http.services.frigate.loadbalancer.server.port=5000"
+      # Promtail/Loki log collection labels
+      - "orion.stack=home"
+      - "orion.service=frigate"
+    logging:
+      driver: json-file
+      options:
+        max-size: "50m"
+        max-file: "5"
+
+############################
+# NETWORKS
+############################
+
+networks:
+  orion_home:
+    name: orion_home
+    driver: bridge
+  orion_proxy:
+    name: orion_proxy
+    external: true

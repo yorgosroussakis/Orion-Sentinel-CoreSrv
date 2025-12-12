@@ -1,0 +1,117 @@
+# ============================================================================
+# Frigate NVR Configuration Template - Orion-Sentinel-CoreSrv
+# ============================================================================
+#
+# SETUP INSTRUCTIONS:
+# 1. Copy this file: cp config.example.yml config.yml
+# 2. Replace placeholder values:
+#    - <CAMERA_IP>: Your Tapo camera's IP (e.g., 192.168.1.100)
+#    - <TAPO_USER>: Camera account username
+#    - <TAPO_PASS>: Camera account password
+# 3. Repeat for each camera you want to add
+#
+# TAPO CAMERA SETUP:
+#   Open Tapo app → Camera Settings → Advanced Settings → Camera Account
+#   Create a username and password (this is separate from your Tapo account)
+#
+# RTSP URL FORMAT:
+#   - High quality (1080p): rtsp://USER:PASS@IP:554/stream1
+#   - Low quality (360p):   rtsp://USER:PASS@IP:554/stream2
+#
+# For more options: https://docs.frigate.video/configuration/
+# ============================================================================
+
+# MQTT (optional - enables Home Assistant integration)
+mqtt:
+  enabled: false
+  # Uncomment to enable MQTT:
+  # host: orion_mosquitto
+  # port: 1883
+  # user: frigate
+  # password: your_mqtt_password
+
+# Object detection (CPU by default)
+detectors:
+  cpu1:
+    type: cpu
+    num_threads: 2
+  # Coral TPU (uncomment to enable):
+  # coral:
+  #   type: edgetpu
+  #   device: usb
+
+# Recording settings
+record:
+  enabled: true
+  retain:
+    days: 7
+    mode: all
+
+# Snapshot settings
+snapshots:
+  enabled: true
+  retain:
+    default: 14
+
+# Detection settings
+detect:
+  enabled: true
+  fps: 5
+  width: 1280
+  height: 720
+
+# Objects to detect
+objects:
+  track:
+    - person
+    - car
+    - dog
+    - cat
+
+# ============================================================================
+# CAMERAS - Configure your cameras below
+# ============================================================================
+cameras:
+  # ---- EXAMPLE: Living Room Camera ----
+  # Replace <TAPO_USER>, <TAPO_PASS>, <CAMERA_IP> with your values
+  living_room:
+    enabled: true
+    ffmpeg:
+      inputs:
+        - path: rtsp://<TAPO_USER>:<TAPO_PASS>@<CAMERA_IP>:554/stream1
+          roles:
+            - record
+        - path: rtsp://<TAPO_USER>:<TAPO_PASS>@<CAMERA_IP>:554/stream2
+          roles:
+            - detect
+    detect:
+      width: 640
+      height: 360
+      fps: 5
+
+  # ---- Add more cameras below ----
+  # front_door:
+  #   enabled: true
+  #   ffmpeg:
+  #     inputs:
+  #       - path: rtsp://<TAPO_USER>:<TAPO_PASS>@<CAMERA_IP>:554/stream1
+  #         roles:
+  #           - record
+  #       - path: rtsp://<TAPO_USER>:<TAPO_PASS>@<CAMERA_IP>:554/stream2
+  #         roles:
+  #           - detect
+
+# RTSP restreaming
+go2rtc:
+  streams:
+    living_room:
+      - rtsp://<TAPO_USER>:<TAPO_PASS>@<CAMERA_IP>:554/stream1
+
+# Multi-camera overview
+birdseye:
+  enabled: true
+  mode: continuous
+
+# Logging
+logger:
+  default: info

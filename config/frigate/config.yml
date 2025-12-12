@@ -1,0 +1,212 @@
+# ============================================================================
+# Frigate NVR Configuration - Orion-Sentinel-CoreSrv
+# ============================================================================
+#
+# This is the main Frigate configuration file.
+# Edit this file with your camera IPs and credentials.
+#
+# TAPO CAMERA SETUP:
+# 1. Open Tapo app → Camera Settings → Advanced Settings → Camera Account
+# 2. Create a username and password (separate from your Tapo account)
+# 3. Replace TAPO_USER, TAPO_PASS, and CAMERA_IP below with your values
+#
+# RTSP URL FORMAT:
+#   - High quality (1080p): rtsp://USER:PASS@CAMERA_IP:554/stream1
+#   - Low quality (360p):   rtsp://USER:PASS@CAMERA_IP:554/stream2
+#
+# For more options: https://docs.frigate.video/configuration/
+# ============================================================================
+
+# ============================================================================
+# MQTT INTEGRATION (Optional)
+# ============================================================================
+# MQTT enables real-time event notifications and Home Assistant integration.
+# Frigate works fine without MQTT - just leave this section disabled.
+#
+# To enable MQTT:
+# 1. Uncomment the mqtt section below
+# 2. Update the host to your MQTT broker (use 'orion_mosquitto' for home stack)
+# 3. Update user/password if your broker requires authentication
+mqtt:
+  enabled: false
+  # host: orion_mosquitto
+  # port: 1883
+  # user: frigate
+  # password: your_mqtt_password
+  # topic_prefix: frigate
+  # client_id: frigate
+
+# ============================================================================
+# DETECTORS - Object detection configuration
+# ============================================================================
+# CPU detection works out of the box but is slower.
+# For better performance, consider adding a Coral TPU.
+detectors:
+  # CPU detector (default, no extra hardware needed)
+  cpu1:
+    type: cpu
+    num_threads: 2
+
+  # ---- CORAL USB ACCELERATOR ----
+  # Provides ~10x faster detection than CPU
+  # To enable:
+  # 1. Uncomment the coral section below
+  # 2. Uncomment the USB device mapping in cam_nvr.compose.yml
+  # coral:
+  #   type: edgetpu
+  #   device: usb
+
+  # ---- CORAL PCIe/M.2 ----
+  # coral:
+  #   type: edgetpu
+  #   device: pci
+
+# ============================================================================
+# FFMPEG - Global transcoding settings
+# ============================================================================
+ffmpeg:
+  # Hardware acceleration (uncomment for Intel QSV)
+  # Also uncomment /dev/dri device in cam_nvr.compose.yml
+  # hwaccel_args: preset-vaapi
+
+  # For NVIDIA (requires nvidia-docker):
+  # hwaccel_args: preset-nvidia-h264
+
+  # Output arguments for recordings
+  output_args:
+    record: preset-record-generic-audio-aac
+
+# ============================================================================
+# RECORDING - Global recording settings
+# ============================================================================
+record:
+  enabled: true
+  retain:
+    days: 7
+    mode: all
+  events:
+    retain:
+      default: 30
+      mode: motion
+
+# ============================================================================
+# SNAPSHOTS - Image capture on events
+# ============================================================================
+snapshots:
+  enabled: true
+  crop: true
+  bounding_box: true
+  retain:
+    default: 14
+
+# ============================================================================
+# DETECTION - Object detection settings
+# ============================================================================
+detect:
+  enabled: true
+  fps: 5
+  width: 1280
+  height: 720
+
+# ============================================================================
+# OBJECTS - What to detect
+# ============================================================================
+objects:
+  track:
+    - person
+    - car
+    - dog
+    - cat
+  filters:
+    person:
+      min_score: 0.5
+      min_area: 5000
+      max_area: 100000
+    car:
+      min_score: 0.5
+      min_area: 10000
+
+# ============================================================================
+# CAMERAS
+# ============================================================================
+# Replace TAPO_USER, TAPO_PASS, and CAMERA_IP with your actual values.
+# Copy and modify the camera block for each additional camera.
+
+cameras:
+  # ---- LIVING ROOM CAMERA ----
+  # TODO: Replace these placeholders with your camera credentials
+  living_room_tapo:
+    enabled: true
+    ffmpeg:
+      inputs:
+        # Main stream for recording (1080p)
+        - path: rtsp://TAPO_USER:TAPO_PASS@CAMERA_IP:554/stream1
+          roles:
+            - record
+        # Sub stream for detection (360p, less CPU intensive)
+        - path: rtsp://TAPO_USER:TAPO_PASS@CAMERA_IP:554/stream2
+          roles:
+            - detect
+    detect:
+      enabled: true
+      width: 640
+      height: 360
+      fps: 5
+    record:
+      enabled: true
+
+  # ---- FRONT DOOR CAMERA (EXAMPLE) ----
+  # Uncomment and configure for a second camera
+  # front_door_tapo:
+  #   enabled: true
+  #   ffmpeg:
+  #     inputs:
+  #       - path: rtsp://TAPO_USER:TAPO_PASS@CAMERA_IP:554/stream1
+  #         roles:
+  #           - record
+  #       - path: rtsp://TAPO_USER:TAPO_PASS@CAMERA_IP:554/stream2
+  #         roles:
+  #           - detect
+  #   detect:
+  #     enabled: true
+  #     width: 640
+  #     height: 360
+  #     fps: 5
+  #   record:
+  #     enabled: true
+
+# ============================================================================
+# UI / WEB INTERFACE
+# ============================================================================
+ui:
+  live:
+    stream_name: mse
+  time_format: browser
+
+# ============================================================================
+# BIRDSEYE - Multi-camera overview
+# ============================================================================
+birdseye:
+  enabled: true
+  mode: continuous
+  width: 1920
+  height: 1080
+
+# ============================================================================
+# GO2RTC - RTSP restreaming
+# ============================================================================
+# Access restreams at: rtsp://frigate-host:8554/camera_name
+go2rtc:
+  streams:
+    living_room_tapo:
+      - rtsp://TAPO_USER:TAPO_PASS@CAMERA_IP:554/stream1
+    # front_door_tapo:
+    #   - rtsp://TAPO_USER:TAPO_PASS@CAMERA_IP:554/stream1
+
+# ============================================================================
+# LOGGER
+# ============================================================================
+logger:
+  default: info
+  # logs:
+  #   frigate.record: debug

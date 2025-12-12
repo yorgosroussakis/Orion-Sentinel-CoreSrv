@@ -16,7 +16,7 @@
 #
 # ============================================================================
 
-.PHONY: help setup validate up-core up-media up-traefik up-gateway up-observability up-monitoring up-home-automation up-homeauto up-extras up-all up-full down stop restart logs status ps health pull clean backup
+.PHONY: help setup validate up-core up-media up-traefik up-gateway up-observability up-monitoring up-home-automation up-homeauto up-nvr up-extras up-all up-full down stop restart logs status ps health pull clean backup
 
 # Default target
 .DEFAULT_GOAL := help
@@ -45,6 +45,7 @@ help: ## Show this help message
 	@echo "  make up-monitoring  - Alias for up-observability"
 	@echo "  make up-home-automation - Start home automation (Home Assistant, etc.)"
 	@echo "  make up-homeauto    - Alias for up-home-automation"
+	@echo "  make up-nvr         - Start NVR/Frigate (camera recording)"
 	@echo "  make up-extras      - Start additional services (Homepage, SearXNG)"
 	@echo "  make up-full        - Start ALL services"
 	@echo "  make up-all         - Alias for up-full (standardized command)"
@@ -148,6 +149,24 @@ up-homeauto: ## Start home automation (Home Assistant, Zigbee2MQTT, MQTT, Mealie
 	@docker compose -f compose/docker-compose.homeauto.yml up -d
 	@echo "✓ Home automation stack started"
 
+up-nvr: ## Start NVR/Frigate (camera recording)
+	@echo "📹 Starting NVR (Frigate)..."
+	@if [ ! -f config/frigate/config.yml ]; then \
+		echo ""; \
+		echo "⚠️  config/frigate/config.yml not found!"; \
+		echo "   Copy the example and configure your cameras:"; \
+		echo "   cp config/frigate/config.example.yml config/frigate/config.yml"; \
+		echo ""; \
+		exit 1; \
+	fi
+	@docker compose -f stacks/home/cam_nvr.compose.yml up -d
+	@echo "✓ NVR (Frigate) started"
+	@echo ""
+	@echo "Access Frigate:"
+	@echo "  WebUI:   http://localhost:5000"
+	@echo "  RTSP:    rtsp://localhost:8554/<camera_name>"
+	@echo "  Traefik: https://frigate.orion.lan"
+
 up-extras: ## Start additional services (Homepage, SearXNG, etc.)
 	@echo "🔧 Starting additional services..."
 	@if [ ! -f env/.env.extras ]; then \
@@ -183,6 +202,7 @@ down: ## Stop all services
 	@docker compose -f compose/docker-compose.gateway.yml down || true
 	@docker compose -f compose/docker-compose.observability.yml down || true
 	@docker compose -f compose/docker-compose.homeauto.yml down || true
+	@docker compose -f stacks/home/cam_nvr.compose.yml down || true
 	@docker compose -f compose/docker-compose.extras.yml down || true
 	@echo "✓ All services stopped"
 
@@ -192,6 +212,7 @@ stop: ## Stop all services (keep containers)
 	@docker compose -f compose/docker-compose.gateway.yml stop || true
 	@docker compose -f compose/docker-compose.observability.yml stop || true
 	@docker compose -f compose/docker-compose.homeauto.yml stop || true
+	@docker compose -f stacks/home/cam_nvr.compose.yml stop || true
 	@docker compose -f compose/docker-compose.extras.yml stop || true
 	@echo "✓ All services stopped"
 
@@ -202,6 +223,7 @@ ifdef SVC
 	 docker compose -f compose/docker-compose.gateway.yml restart $(SVC) 2>/dev/null || \
 	 docker compose -f compose/docker-compose.observability.yml restart $(SVC) 2>/dev/null || \
 	 docker compose -f compose/docker-compose.homeauto.yml restart $(SVC) 2>/dev/null || \
+	 docker compose -f stacks/home/cam_nvr.compose.yml restart $(SVC) 2>/dev/null || \
 	 docker compose -f compose/docker-compose.extras.yml restart $(SVC) 2>/dev/null || \
 	 echo "❌ Service $(SVC) not found"
 	@echo "✓ $(SVC) restarted"
@@ -211,6 +233,7 @@ else
 	@docker compose -f compose/docker-compose.gateway.yml restart || true
 	@docker compose -f compose/docker-compose.observability.yml restart || true
 	@docker compose -f compose/docker-compose.homeauto.yml restart || true
+	@docker compose -f stacks/home/cam_nvr.compose.yml restart || true
 	@docker compose -f compose/docker-compose.extras.yml restart || true
 	@echo "✓ All services restarted"
 endif
@@ -222,6 +245,7 @@ ifdef SVC
 	 docker compose -f compose/docker-compose.gateway.yml logs -f $(SVC) 2>/dev/null || \
 	 docker compose -f compose/docker-compose.observability.yml logs -f $(SVC) 2>/dev/null || \
 	 docker compose -f compose/docker-compose.homeauto.yml logs -f $(SVC) 2>/dev/null || \
+	 docker compose -f stacks/home/cam_nvr.compose.yml logs -f $(SVC) 2>/dev/null || \
 	 docker compose -f compose/docker-compose.extras.yml logs -f $(SVC) 2>/dev/null || \
 	 echo "❌ Service $(SVC) not found"
 else
@@ -230,6 +254,7 @@ else
 	 docker compose -f compose/docker-compose.gateway.yml logs -f 2>/dev/null & \
 	 docker compose -f compose/docker-compose.observability.yml logs -f 2>/dev/null & \
 	 docker compose -f compose/docker-compose.homeauto.yml logs -f 2>/dev/null & \
+	 docker compose -f stacks/home/cam_nvr.compose.yml logs -f 2>/dev/null & \
 	 docker compose -f compose/docker-compose.extras.yml logs -f 2>/dev/null & \
 	 wait
 endif
@@ -242,6 +267,7 @@ ps: ## List running containers
 	@docker compose -f compose/docker-compose.gateway.yml ps 2>/dev/null || true
 	@docker compose -f compose/docker-compose.observability.yml ps 2>/dev/null || true
 	@docker compose -f compose/docker-compose.homeauto.yml ps 2>/dev/null || true
+	@docker compose -f stacks/home/cam_nvr.compose.yml ps 2>/dev/null || true
 	@docker compose -f compose/docker-compose.extras.yml ps 2>/dev/null || true
 
 health: ## Check service health
@@ -261,6 +287,7 @@ pull: ## Pull latest images
 	@docker compose -f compose/docker-compose.gateway.yml pull
 	@docker compose -f compose/docker-compose.observability.yml pull
 	@docker compose -f compose/docker-compose.homeauto.yml pull
+	@docker compose -f stacks/home/cam_nvr.compose.yml pull
 	@docker compose -f compose/docker-compose.extras.yml pull
 	@echo "✓ Images updated"
 
@@ -280,6 +307,7 @@ clean: ## Remove stopped containers and unused images
 	@docker compose -f compose/docker-compose.gateway.yml down --remove-orphans 2>/dev/null || true
 	@docker compose -f compose/docker-compose.observability.yml down --remove-orphans 2>/dev/null || true
 	@docker compose -f compose/docker-compose.homeauto.yml down --remove-orphans 2>/dev/null || true
+	@docker compose -f stacks/home/cam_nvr.compose.yml down --remove-orphans 2>/dev/null || true
 	@docker compose -f compose/docker-compose.extras.yml down --remove-orphans 2>/dev/null || true
 	@docker system prune -f
 	@echo "✓ Cleanup complete"
@@ -334,6 +362,7 @@ dev-gateway: ## Start gateway with logs attached (for development)
 #   - compose/docker-compose.gateway.yml      : Traefik + Authelia
 #   - compose/docker-compose.observability.yml: Monitoring
 #   - compose/docker-compose.homeauto.yml     : Home automation
+#   - stacks/home/cam_nvr.compose.yml         : NVR/Frigate camera recording
 #
 # For more information, see README.md
 #
