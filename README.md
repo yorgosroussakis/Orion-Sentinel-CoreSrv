@@ -31,6 +31,7 @@ Access Jellyfin at `http://localhost:8096` - you're done!
 | **Traefik** | Traefik, Authelia, Redis | Reverse proxy with HTTPS & SSO |
 | **Observability** | Prometheus, Grafana, Loki, Promtail, Uptime Kuma | Monitoring & alerting |
 | **Home Automation** | Home Assistant, Mosquitto, Zigbee2MQTT, Mealie | Smart home & IoT |
+| **NVR** | Frigate | Camera recording with object detection |
 
 ## Modular Architecture
 
@@ -206,6 +207,34 @@ Media + Reverse Proxy + Monitoring + Home Automation:
 make up-full
 ```
 
+### Camera NVR (Frigate)
+
+Network Video Recorder for RTSP cameras (Tapo C220/C210, etc.):
+
+```bash
+# 1. Create Frigate config
+cp config/frigate/config.example.yml config/frigate/config.yml
+
+# 2. Edit config with your camera IPs and credentials
+nano config/frigate/config.yml
+
+# 3. Start NVR
+make up-nvr
+```
+
+**Access Frigate:**
+- WebUI: http://localhost:5000
+- RTSP restream: rtsp://localhost:8554/<camera_name>
+- Via Traefik: https://frigate.orion.lan
+
+**Setting up Tapo cameras:**
+1. Open Tapo app → Camera Settings → Advanced Settings → Camera Account
+2. Create a username and password (this is different from your Tapo account)
+3. Use these credentials in `config/frigate/config.yml`
+4. RTSP URLs: `rtsp://USER:PASS@CAMERA_IP:554/stream1` (1080p) or `stream2` (360p)
+
+See `config/frigate/config.example.yml` for detailed configuration options.
+
 ## Configuration Guide
 
 ### Essential Settings (.env)
@@ -265,6 +294,7 @@ make up-media           # Start media stack
 make up-traefik         # Start Traefik + Authelia  
 make up-observability   # Start monitoring
 make up-homeauto        # Start home automation
+make up-nvr             # Start NVR/Frigate (cameras)
 make up-full            # Start everything
 
 # Management  
