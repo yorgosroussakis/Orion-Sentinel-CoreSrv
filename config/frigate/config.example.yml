@@ -5,10 +5,10 @@
 # SETUP INSTRUCTIONS:
 # 1. Copy this file: cp config.example.yml config.yml
 # 2. Replace placeholder values:
-#    - <CAMERA_IP>: Your Tapo camera's IP (e.g., 192.168.1.100)
-#    - <TAPO_USER>: Camera account username
-#    - <TAPO_PASS>: Camera account password
-# 3. Repeat for each camera you want to add
+#    - RTSP_USER: Camera account username (from Tapo app Camera Account)
+#    - RTSP_PASS: Camera account password
+#    - Camera IPs: 192.168.10.11 through 192.168.10.17 (or your actual IPs)
+# 3. Adjust camera names and locations as needed
 #
 # TAPO CAMERA SETUP:
 #   Open Tapo app → Camera Settings → Advanced Settings → Camera Account
@@ -40,12 +40,25 @@ detectors:
   #   type: edgetpu
   #   device: usb
 
-# Recording settings
+# Recording settings - Event-only recording (no continuous 24/7 footage)
 record:
   enabled: true
+  # Do not keep non-event recordings
   retain:
-    days: 7
-    mode: all
+    days: 0
+    mode: motion
+  # Event recording settings
+  events:
+    pre_capture: 5        # seconds before event
+    post_capture: 10      # seconds after event
+    objects:
+      - person
+      - car
+      - dog
+      - cat
+    retain:
+      default: 14         # keep event clips on primary storage for 14 days
+      mode: active_objects
 
 # Snapshot settings
 snapshots:
@@ -69,19 +82,29 @@ objects:
     - cat
 
 # ============================================================================
-# CAMERAS - Configure your cameras below
+# CAMERAS - 7 Camera Configuration Template
 # ============================================================================
+# Replace RTSP_USER, RTSP_PASS, and IP addresses with your actual values.
+#
+# Suggested IP scheme (adjust to your network):
+#   cam1_living_room: 192.168.10.11
+#   cam2_kitchen:     192.168.10.12
+#   cam3_hallway:     192.168.10.13
+#   cam4_kids_room:   192.168.10.14
+#   cam5_office:      192.168.10.15
+#   cam6_backyard:    192.168.10.16
+#   cam7_front_door:  192.168.10.17
+
 cameras:
-  # ---- EXAMPLE: Living Room Camera ----
-  # Replace <TAPO_USER>, <TAPO_PASS>, <CAMERA_IP> with your values
-  living_room:
+  # ---- CAMERA 1: LIVING ROOM ----
+  cam1_living_room:
     enabled: true
     ffmpeg:
       inputs:
-        - path: rtsp://<TAPO_USER>:<TAPO_PASS>@<CAMERA_IP>:554/stream1
+        - path: rtsp://RTSP_USER:RTSP_PASS@CAMERA_IP_1:554/stream1
           roles:
             - record
-        - path: rtsp://<TAPO_USER>:<TAPO_PASS>@<CAMERA_IP>:554/stream2
+        - path: rtsp://RTSP_USER:RTSP_PASS@CAMERA_IP_1:554/stream2
           roles:
             - detect
     detect:
@@ -89,23 +112,119 @@ cameras:
       height: 360
       fps: 5
 
-  # ---- Add more cameras below ----
-  # front_door:
-  #   enabled: true
-  #   ffmpeg:
-  #     inputs:
-  #       - path: rtsp://<TAPO_USER>:<TAPO_PASS>@<CAMERA_IP>:554/stream1
-  #         roles:
-  #           - record
-  #       - path: rtsp://<TAPO_USER>:<TAPO_PASS>@<CAMERA_IP>:554/stream2
-  #         roles:
-  #           - detect
+  # ---- CAMERA 2: KITCHEN ----
+  cam2_kitchen:
+    enabled: true
+    ffmpeg:
+      inputs:
+        - path: rtsp://RTSP_USER:RTSP_PASS@CAMERA_IP_2:554/stream1
+          roles:
+            - record
+        - path: rtsp://RTSP_USER:RTSP_PASS@CAMERA_IP_2:554/stream2
+          roles:
+            - detect
+    detect:
+      width: 640
+      height: 360
+      fps: 5
+
+  # ---- CAMERA 3: HALLWAY ----
+  cam3_hallway:
+    enabled: true
+    ffmpeg:
+      inputs:
+        - path: rtsp://RTSP_USER:RTSP_PASS@CAMERA_IP_3:554/stream1
+          roles:
+            - record
+        - path: rtsp://RTSP_USER:RTSP_PASS@CAMERA_IP_3:554/stream2
+          roles:
+            - detect
+    detect:
+      width: 640
+      height: 360
+      fps: 5
+
+  # ---- CAMERA 4: KIDS ROOM ----
+  cam4_kids_room:
+    enabled: true
+    ffmpeg:
+      inputs:
+        - path: rtsp://RTSP_USER:RTSP_PASS@CAMERA_IP_4:554/stream1
+          roles:
+            - record
+        - path: rtsp://RTSP_USER:RTSP_PASS@CAMERA_IP_4:554/stream2
+          roles:
+            - detect
+    detect:
+      width: 640
+      height: 360
+      fps: 5
+
+  # ---- CAMERA 5: OFFICE ----
+  cam5_office:
+    enabled: true
+    ffmpeg:
+      inputs:
+        - path: rtsp://RTSP_USER:RTSP_PASS@CAMERA_IP_5:554/stream1
+          roles:
+            - record
+        - path: rtsp://RTSP_USER:RTSP_PASS@CAMERA_IP_5:554/stream2
+          roles:
+            - detect
+    detect:
+      width: 640
+      height: 360
+      fps: 5
+
+  # ---- CAMERA 6: BACKYARD ----
+  cam6_backyard:
+    enabled: true
+    ffmpeg:
+      inputs:
+        - path: rtsp://RTSP_USER:RTSP_PASS@CAMERA_IP_6:554/stream1
+          roles:
+            - record
+        - path: rtsp://RTSP_USER:RTSP_PASS@CAMERA_IP_6:554/stream2
+          roles:
+            - detect
+    detect:
+      width: 640
+      height: 360
+      fps: 5
+
+  # ---- CAMERA 7: FRONT DOOR ----
+  cam7_front_door:
+    enabled: true
+    ffmpeg:
+      inputs:
+        - path: rtsp://RTSP_USER:RTSP_PASS@CAMERA_IP_7:554/stream1
+          roles:
+            - record
+        - path: rtsp://RTSP_USER:RTSP_PASS@CAMERA_IP_7:554/stream2
+          roles:
+            - detect
+    detect:
+      width: 640
+      height: 360
+      fps: 5
 
 # RTSP restreaming
 go2rtc:
   streams:
-    living_room:
-      - rtsp://<TAPO_USER>:<TAPO_PASS>@<CAMERA_IP>:554/stream1
+    cam1_living_room:
+      - rtsp://RTSP_USER:RTSP_PASS@CAMERA_IP_1:554/stream1
+    cam2_kitchen:
+      - rtsp://RTSP_USER:RTSP_PASS@CAMERA_IP_2:554/stream1
+    cam3_hallway:
+      - rtsp://RTSP_USER:RTSP_PASS@CAMERA_IP_3:554/stream1
+    cam4_kids_room:
+      - rtsp://RTSP_USER:RTSP_PASS@CAMERA_IP_4:554/stream1
+    cam5_office:
+      - rtsp://RTSP_USER:RTSP_PASS@CAMERA_IP_5:554/stream1
+    cam6_backyard:
+      - rtsp://RTSP_USER:RTSP_PASS@CAMERA_IP_6:554/stream1
+    cam7_front_door:
+      - rtsp://RTSP_USER:RTSP_PASS@CAMERA_IP_7:554/stream1
 
 # Multi-camera overview
 birdseye:

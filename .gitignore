@@ -98,8 +98,11 @@ id_rsa*
 
 # Backup output directories (actual backup artifacts, not scripts)
 backups/
-**/backup-*
+**/backup-*/
 *.backup-*/
+# Allow backup scripts in scripts/ directory
+!scripts/backup-*.sh
+!scripts/**backup-*.sh
 
 # =============================================================================
 # TEMPORARY FILES

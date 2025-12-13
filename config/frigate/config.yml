@@ -77,17 +77,28 @@ ffmpeg:
     record: preset-record-generic-audio-aac
 
 # ============================================================================
-# RECORDING - Global recording settings
+# RECORDING - Event-only recording settings
 # ============================================================================
+# Configure for event-only recording (no continuous 24/7 footage)
+# Only motion/object-detection events are kept
 record:
   enabled: true
+  # Do not keep non-event recordings (continuous footage)
   retain:
-    days: 7
-    mode: all
+    days: 0
+    mode: motion
+  # Event recording settings
   events:
+    pre_capture: 5        # seconds before event
+    post_capture: 10      # seconds after event
+    objects:
+      - person
+      - car
+      - dog
+      - cat
     retain:
-      default: 30
-      mode: motion
+      default: 14         # keep event clips on primary storage for 14 days
+      mode: active_objects
 
 # ============================================================================
 # SNAPSHOTS - Image capture on events
@@ -127,24 +138,36 @@ objects:
       min_area: 10000
 
 # ============================================================================
-# CAMERAS
+# CAMERAS - 7 Camera Configuration
 # ============================================================================
-# Replace TAPO_USER, TAPO_PASS, and CAMERA_IP with your actual values.
-# Copy and modify the camera block for each additional camera.
+# Replace RTSP_USER, RTSP_PASS, and IP addresses with your actual values.
+#
+# TAPO CAMERA SETUP:
+# 1. Open Tapo app → Camera Settings → Advanced Settings → Camera Account
+# 2. Create a username and password (this is separate from your Tapo account)
+# 3. Use these credentials below for RTSP_USER and RTSP_PASS
+#
+# IP ADDRESS SCHEME:
+# - cam1: 192.168.10.11
+# - cam2: 192.168.10.12
+# - cam3: 192.168.10.13
+# - cam4: 192.168.10.14
+# - cam5: 192.168.10.15
+# - cam6: 192.168.10.16
+# - cam7: 192.168.10.17
 
 cameras:
-  # ---- LIVING ROOM CAMERA ----
-  # TODO: Replace these placeholders with your camera credentials
-  living_room_tapo:
+  # ---- CAMERA 1: LIVING ROOM ----
+  cam1_living_room:
     enabled: true
     ffmpeg:
       inputs:
-        # Main stream for recording (1080p)
-        - path: rtsp://TAPO_USER:TAPO_PASS@CAMERA_IP:554/stream1
+        # High-res stream for recording (1080p)
+        - path: rtsp://RTSP_USER:RTSP_PASS@192.168.10.11:554/stream1
           roles:
             - record
-        # Sub stream for detection (360p, less CPU intensive)
-        - path: rtsp://TAPO_USER:TAPO_PASS@CAMERA_IP:554/stream2
+        # Lower-res stream for detection (360p)
+        - path: rtsp://RTSP_USER:RTSP_PASS@192.168.10.11:554/stream2
           roles:
             - detect
     detect:
@@ -152,28 +175,148 @@ cameras:
       width: 640
       height: 360
       fps: 5
+    objects:
+      track:
+        - person
+        - dog
     record:
       enabled: true
 
-  # ---- FRONT DOOR CAMERA (EXAMPLE) ----
-  # Uncomment and configure for a second camera
-  # front_door_tapo:
-  #   enabled: true
-  #   ffmpeg:
-  #     inputs:
-  #       - path: rtsp://TAPO_USER:TAPO_PASS@CAMERA_IP:554/stream1
-  #         roles:
-  #           - record
-  #       - path: rtsp://TAPO_USER:TAPO_PASS@CAMERA_IP:554/stream2
-  #         roles:
-  #           - detect
-  #   detect:
-  #     enabled: true
-  #     width: 640
-  #     height: 360
-  #     fps: 5
-  #   record:
-  #     enabled: true
+  # ---- CAMERA 2: KITCHEN ----
+  cam2_kitchen:
+    enabled: true
+    ffmpeg:
+      inputs:
+        - path: rtsp://RTSP_USER:RTSP_PASS@192.168.10.12:554/stream1
+          roles:
+            - record
+        - path: rtsp://RTSP_USER:RTSP_PASS@192.168.10.12:554/stream2
+          roles:
+            - detect
+    detect:
+      enabled: true
+      width: 640
+      height: 360
+      fps: 5
+    objects:
+      track:
+        - person
+    record:
+      enabled: true
+
+  # ---- CAMERA 3: HALLWAY ----
+  cam3_hallway:
+    enabled: true
+    ffmpeg:
+      inputs:
+        - path: rtsp://RTSP_USER:RTSP_PASS@192.168.10.13:554/stream1
+          roles:
+            - record
+        - path: rtsp://RTSP_USER:RTSP_PASS@192.168.10.13:554/stream2
+          roles:
+            - detect
+    detect:
+      enabled: true
+      width: 640
+      height: 360
+      fps: 5
+    objects:
+      track:
+        - person
+    record:
+      enabled: true
+
+  # ---- CAMERA 4: KIDS ROOM ----
+  cam4_kids_room:
+    enabled: true
+    ffmpeg:
+      inputs:
+        - path: rtsp://RTSP_USER:RTSP_PASS@192.168.10.14:554/stream1
+          roles:
+            - record
+        - path: rtsp://RTSP_USER:RTSP_PASS@192.168.10.14:554/stream2
+          roles:
+            - detect
+    detect:
+      enabled: true
+      width: 640
+      height: 360
+      fps: 5
+    objects:
+      track:
+        - person
+    record:
+      enabled: true
+
+  # ---- CAMERA 5: OFFICE ----
+  cam5_office:
+    enabled: true
+    ffmpeg:
+      inputs:
+        - path: rtsp://RTSP_USER:RTSP_PASS@192.168.10.15:554/stream1
+          roles:
+            - record
+        - path: rtsp://RTSP_USER:RTSP_PASS@192.168.10.15:554/stream2
+          roles:
+            - detect
+    detect:
+      enabled: true
+      width: 640
+      height: 360
+      fps: 5
+    objects:
+      track:
+        - person
+    record:
+      enabled: true
+
+  # ---- CAMERA 6: BACKYARD ----
+  cam6_backyard:
+    enabled: true
+    ffmpeg:
+      inputs:
+        - path: rtsp://RTSP_USER:RTSP_PASS@192.168.10.16:554/stream1
+          roles:
+            - record
+        - path: rtsp://RTSP_USER:RTSP_PASS@192.168.10.16:554/stream2
+          roles:
+            - detect
+    detect:
+      enabled: true
+      width: 640
+      height: 360
+      fps: 5
+    objects:
+      track:
+        - person
+        - car
+        - dog
+        - cat
+    record:
+      enabled: true
+
+  # ---- CAMERA 7: FRONT DOOR ----
+  cam7_front_door:
+    enabled: true
+    ffmpeg:
+      inputs:
+        - path: rtsp://RTSP_USER:RTSP_PASS@192.168.10.17:554/stream1
+          roles:
+            - record
+        - path: rtsp://RTSP_USER:RTSP_PASS@192.168.10.17:554/stream2
+          roles:
+            - detect
+    detect:
+      enabled: true
+      width: 640
+      height: 360
+      fps: 5
+    objects:
+      track:
+        - person
+        - car
+    record:
+      enabled: true
 
 # ============================================================================
 # UI / WEB INTERFACE
@@ -195,13 +338,23 @@ birdseye:
 # ============================================================================
 # GO2RTC - RTSP restreaming
 # ============================================================================
-# Access restreams at: rtsp://frigate-host:8554/camera_name
+# Access restreams at: rtsp://frigate-host:8554/<camera_name>
 go2rtc:
   streams:
-    living_room_tapo:
-      - rtsp://TAPO_USER:TAPO_PASS@CAMERA_IP:554/stream1
-    # front_door_tapo:
-    #   - rtsp://TAPO_USER:TAPO_PASS@CAMERA_IP:554/stream1
+    cam1_living_room:
+      - rtsp://RTSP_USER:RTSP_PASS@192.168.10.11:554/stream1
+    cam2_kitchen:
+      - rtsp://RTSP_USER:RTSP_PASS@192.168.10.12:554/stream1
+    cam3_hallway:
+      - rtsp://RTSP_USER:RTSP_PASS@192.168.10.13:554/stream1
+    cam4_kids_room:
+      - rtsp://RTSP_USER:RTSP_PASS@192.168.10.14:554/stream1
+    cam5_office:
+      - rtsp://RTSP_USER:RTSP_PASS@192.168.10.15:554/stream1
+    cam6_backyard:
+      - rtsp://RTSP_USER:RTSP_PASS@192.168.10.16:554/stream1
+    cam7_front_door:
+      - rtsp://RTSP_USER:RTSP_PASS@192.168.10.17:554/stream1
 
 # ============================================================================
 # LOGGER
