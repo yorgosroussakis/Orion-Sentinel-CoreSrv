@@ -207,23 +207,26 @@ Media + Reverse Proxy + Monitoring + Home Automation:
 make up-full
 ```
 
-### Orion Camera NVR (Frigate)
+### Orion Camera NVR (Frigate) – 7 Cameras & Retention
 
 Network Video Recorder for RTSP cameras (Tapo C220/C210, etc.) with object detection.
 
-**Purpose:** Records video from Tapo and other RTSP cameras, provides object detection (person, car, etc.), and integrates with Home Assistant via MQTT.
+**Purpose:** Records video from Tapo and other RTSP cameras with **event-only recording** (no continuous 24/7 footage). Features two-tier storage retention: 14 days on primary SSD, then 30 days in backup archive.
 
 **Config files:** `config/frigate/`
+
+#### Quick Start
 
 ```bash
 # 1. Create Frigate config from template
 cp config/frigate/config.example.yml config/frigate/config.yml
 
-# 2. Edit config with your camera IPs and credentials
+# 2. Edit config with your 7 camera IPs and credentials
 nano config/frigate/config.yml
 
-# 3. Set storage path in .env (point to SSD with sufficient space)
-# ORION_CCTV_MEDIA_DIR=/mnt/orion-cctv
+# 3. Set storage paths in .env
+# ORION_CCTV_MEDIA_DIR=/mnt/orion-cctv          # Primary (SSD) - 14 days
+# ORION_CCTV_BACKUP_DIR=/mnt/orion-cctv-backup  # Backup (HDD) - 30 days
 
 # 4. Start NVR
 make up-nvr
@@ -236,15 +239,55 @@ docker compose -f stacks/home/cam_nvr.compose.yml up -d
 - RTSP restream: rtsp://localhost:8554/<camera_name>
 - Via Traefik: https://frigate.orion.lan
 
+#### Camera Setup
+
 **Setting up Tapo cameras:**
 1. Open Tapo app → Camera Settings → Advanced Settings → Camera Account
 2. Create a username and password (this is different from your Tapo account)
 3. Edit `config/frigate/config.yml` with your camera details:
-   - Replace `<CAMERA_IP>` with your camera's IP address
-   - Replace `<TAPO_USER>` and `<TAPO_PASS>` with the camera account credentials
+   - Replace `RTSP_USER` and `RTSP_PASS` with the camera account credentials
+   - Update IP addresses (default scheme: 192.168.10.11 through 192.168.10.17)
+   - Adjust camera names/locations as needed (cam1_living_room, cam2_kitchen, etc.)
 4. RTSP URLs:
    - `rtsp://USER:PASS@IP:554/stream1` - 1080p (for recording)
    - `rtsp://USER:PASS@IP:554/stream2` - 360p (for detection, uses less CPU)
+
+#### Recording & Retention Workflow
+
+**Event-Only Recording:**
+- Frigate does **NOT** keep continuous 24/7 recordings
+- Only stores clips when motion/objects are detected
+- Pre-capture: 5 seconds before event
+- Post-capture: 10 seconds after event
+- Configured objects: person, car, dog, cat
+
+**Two-Tier Storage Retention:**
+1. **Primary Storage (Hot):** Event clips kept on fast SSD for **14 days**
+   - Set via `ORION_CCTV_MEDIA_DIR` in `.env`
+   - Recommend: SSD with good write endurance
+
+2. **Backup Storage (Archive):** After 14 days, clips moved to backup for **30 more days**
+   - Set via `ORION_CCTV_BACKUP_DIR` in `.env`
+   - Can be slower/cheaper storage (HDD)
+
+3. **Final Purge:** After ~44 days total, recordings are deleted from both locations
+
+**Automated Backup Script:**
+
+Run `scripts/backup-frigate-recordings.sh` daily to maintain retention:
+
+```bash
+# Test run (dry run mode)
+DRY_RUN=1 ./scripts/backup-frigate-recordings.sh
+
+# Manual run
+./scripts/backup-frigate-recordings.sh
+
+# Add to crontab (runs daily at 03:30 AM)
+30 3 * * * /usr/bin/env bash /path/to/Orion-Sentinel-CoreSrv/scripts/backup-frigate-recordings.sh >> /var/log/frigate-backup.log 2>&1
+```
+
+Or use systemd timer (see script header for example configuration).
 
 **MQTT Integration (optional):**
 To enable Home Assistant integration, set in `.env`:
