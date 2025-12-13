@@ -178,7 +178,7 @@ for camera_dir in "$PRIMARY_DIR"/*; do
             MOVED_COUNT=$((MOVED_COUNT + 1))
             MOVED_SIZE=$((MOVED_SIZE + dir_size))
         fi
-    done < <(find "$camera_dir" -mindepth 1 -maxdepth 1 -type d -mtime +$PRIMARY_RETENTION_DAYS -print0 2>/dev/null)
+    done < <(find "$camera_dir" -mindepth 1 -maxdepth 1 -type d -mtime +"${PRIMARY_RETENTION_DAYS}" -print0 2>/dev/null)
 done
 
 log "Moved $MOVED_COUNT directories ($(numfmt --to=iec-i --suffix=B "$MOVED_SIZE" 2>/dev/null || echo "${MOVED_SIZE}B"))"
@@ -219,7 +219,7 @@ for camera_dir in "$PRIMARY_DIR"/*; do
             PURGED_COUNT=$((PURGED_COUNT + 1))
             PURGED_SIZE=$((PURGED_SIZE + dir_size))
         fi
-    done < <(find "$camera_dir" -mindepth 1 -maxdepth 1 -type d -mtime +$BACKUP_RETENTION_DAYS -print0 2>/dev/null)
+    done < <(find "$camera_dir" -mindepth 1 -maxdepth 1 -type d -mtime +"${BACKUP_RETENTION_DAYS}" -print0 2>/dev/null)
 done
 
 # Purge from backup storage
@@ -249,7 +249,7 @@ for camera_dir in "$BACKUP_DIR"/*; do
             PURGED_COUNT=$((PURGED_COUNT + 1))
             PURGED_SIZE=$((PURGED_SIZE + dir_size))
         fi
-    done < <(find "$camera_dir" -mindepth 1 -maxdepth 1 -type d -mtime +$BACKUP_RETENTION_DAYS -print0 2>/dev/null)
+    done < <(find "$camera_dir" -mindepth 1 -maxdepth 1 -type d -mtime +"${BACKUP_RETENTION_DAYS}" -print0 2>/dev/null)
 done
 
 log "Purged $PURGED_COUNT directories ($(numfmt --to=iec-i --suffix=B "$PURGED_SIZE" 2>/dev/null || echo "${PURGED_SIZE}B"))"
