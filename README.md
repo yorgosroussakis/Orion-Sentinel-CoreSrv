@@ -29,7 +29,7 @@ Access Jellyfin at `http://localhost:8096` - you're done!
 |--------|----------|-------------|
 | **Core Media** | Jellyfin, Sonarr, Radarr, qBittorrent, Prowlarr, Jellyseerr | Media streaming & automation |
 | **Traefik** | Traefik, Authelia, Redis | Reverse proxy with HTTPS & SSO |
-| **Observability** | Prometheus, Grafana, Loki, Promtail, Uptime Kuma | Monitoring & alerting |
+| **Observability** | Prometheus, Grafana, Loki, Promtail, Uptime Kuma, Netdata | Monitoring & alerting |
 | **Home Automation** | Home Assistant, Mosquitto, Zigbee2MQTT, Mealie | Smart home & IoT |
 | **NVR** | Frigate | Camera recording with object detection |
 
@@ -48,7 +48,7 @@ Access Jellyfin at `http://localhost:8096` - you're done!
 │  │ • Radarr    │  │ • Redis     │  │ • Loki      │  │ • Zigbee   │ │
 │  │ • qBit      │  │             │  │ • Uptime    │  │ • Mealie   │ │
 │  │ • Prowlarr  │  │             │  │   Kuma      │  │ • MQTT     │ │
-│  │ • Jellyseerr│  │             │  │             │  │            │ │
+│  │ • Jellyseerr│  │             │  │ • Netdata   │  │            │ │
 │  └──────┬──────┘  └──────┬──────┘  └──────┬──────┘  └─────┬──────┘ │
 │         │                │                │                │       │
 │         │    ┌───────────┴────────────────┴────────────────┘       │
@@ -87,7 +87,7 @@ Access Jellyfin at `http://localhost:8096` - you're done!
 │  │Radarr    │  │Redis     │  │Loki      │  │MQTT      │     │
 │  │qBit+VPN  │  │          │  │Uptime    │  │Mealie    │     │
 │  │Prowlarr  │  │          │  │Kuma      │  │          │     │
-│  │Jellyseerr│  │          │  │          │  │          │     │
+│  │Jellyseerr│  │          │  │Netdata   │  │          │     │
 │  └──────────┘  └──────────┘  └──────────┘  └──────────┘     │
 │       ↓              ↓              ↓              ↓         │
 │  Independent    Adds HTTPS    Monitoring     IoT Hub        │
