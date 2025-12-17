@@ -160,6 +160,8 @@ services:
     environment:
       - TZ=${TZ:-Europe/Amsterdam}
       - FIREFLY_III_URL=http://firefly:8080
+      # Note: Generate token in Firefly UI first (Options -> Profile -> OAuth)
+      # Leave empty on first run, then add token and restart importer
       - FIREFLY_III_ACCESS_TOKEN=${FIREFLY_IMPORTER_TOKEN:-}
       - VANITY_URL=https://firefly-importer.${LOCAL_DOMAIN:-orion.lan}
       - TRUSTED_PROXIES=**

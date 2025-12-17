@@ -63,6 +63,8 @@ services:
       - PGID=${ORION_GID:-1000}
     volumes:
       - ${ORION_INTERNAL_ROOT:-/srv/orion/internal}/appdata/homepage:/app/config
+      # Note: Docker socket access is now via docker-socket-proxy for security
+      # Previously mounted /var/run/docker.sock directly (less secure)
     networks:
       - orion_proxy
       - orion_portal_internal

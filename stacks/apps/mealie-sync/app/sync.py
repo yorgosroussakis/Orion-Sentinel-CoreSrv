@@ -61,12 +61,15 @@ class MealieClient:
             logger.info(f"✓ Imported: {recipe.get('name', 'Unknown')}")
             return recipe
         except requests.exceptions.HTTPError as e:
-            if e.response.status_code == 400:
-                logger.warning(f"✗ Failed to scrape recipe from {url}: Invalid or unsupported format")
-            elif e.response.status_code == 409:
-                logger.warning(f"⊙ Recipe already exists: {url}")
+            if hasattr(e, 'response') and e.response is not None:
+                if e.response.status_code == 400:
+                    logger.warning(f"✗ Failed to scrape recipe from {url}: Invalid or unsupported format")
+                elif e.response.status_code == 409:
+                    logger.warning(f"⊙ Recipe already exists: {url}")
+                else:
+                    logger.error(f"✗ HTTP error importing {url}: {e}")
             else:
-                logger.error(f"✗ HTTP error importing {url}: {e}")
+                logger.error(f"✗ Network error importing {url}: {e}")
             return None
         except Exception as e:
             logger.error(f"✗ Error importing {url}: {e}")
