@@ -1,0 +1,104 @@
+# Orion-Sentinel-CoreSrv Netdata Stack
+# Real-time system and container monitoring with Netdata
+#
+# Usage:
+#   docker compose -f stacks/observability/netdata/compose.yml up -d
+#   OR
+#   ./scripts/deploy.sh netdata
+#
+# Exposed at:
+#   - netdata.orion.lan (via Traefik)
+
+services:
+  ############################
+  # NETDATA: Real-time Monitoring
+  ############################
+
+  netdata:
+    image: netdata/netdata:v1.47.0
+    container_name: orion_netdata
+    restart: unless-stopped
+    hostname: ${NETDATA_HOSTNAME:-coresrv-netdata}
+
+    # Environment
+    environment:
+      - TZ=${TZ:-Europe/Amsterdam}
+      # Netdata Cloud (optional - leave empty to disable)
+      - NETDATA_CLAIM_TOKEN=${NETDATA_CLAIM_TOKEN:-}
+      - NETDATA_CLAIM_ROOMS=${NETDATA_CLAIM_ROOMS:-}
+      - NETDATA_CLAIM_URL=${NETDATA_CLAIM_URL:-https://app.netdata.cloud}
+      # Disable telemetry by default
+      - DO_NOT_TRACK=${NETDATA_DISABLE_TELEMETRY:-1}
+
+    # Capabilities for host metrics access
+    cap_add:
+      - SYS_PTRACE
+      - SYS_ADMIN
+
+    # Security
+    security_opt:
+      - apparmor:unconfined
+
+    # Host metrics access (read-only mounts)
+    volumes:
+      # Persistent Netdata data
+      - ${ORION_INTERNAL_ROOT:-/srv/orion/internal}/observability/netdata/config:/etc/netdata
+      - ${ORION_INTERNAL_ROOT:-/srv/orion/internal}/observability/netdata/lib:/var/lib/netdata
+      - ${ORION_INTERNAL_ROOT:-/srv/orion/internal}/observability/netdata/cache:/var/cache/netdata
+
+      # Host system access (read-only)
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /etc/os-release:/host/etc/os-release:ro
+      - /etc/passwd:/host/etc/passwd:ro
+      - /etc/group:/host/etc/group:ro
+
+      # Docker socket for container metrics (read-only)
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+    # Networks
+    networks:
+      - orion_observability
+      - orion_proxy
+
+    # Health check
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://localhost:19999/api/v1/info || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+    # Traefik labels
+    labels:
+      - "traefik.enable=true"
+
+      # HTTP router
+      - "traefik.http.routers.netdata.rule=Host(`${NETDATA_DOMAIN:-netdata.${LOCAL_DOMAIN:-orion.lan}}`)"
+      - "traefik.http.routers.netdata.entrypoints=websecure"
+      - "traefik.http.routers.netdata.tls=true"
+
+      # Security middleware
+      - "traefik.http.routers.netdata.middlewares=security-headers@file"
+
+      # Service port
+      - "traefik.http.services.netdata.loadbalancer.server.port=19999"
+
+    # Logging
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+############################
+# NETWORKS
+############################
+
+networks:
+  orion_observability:
+    name: orion_observability
+    external: true
+  orion_proxy:
+    name: orion_proxy
+    external: true
