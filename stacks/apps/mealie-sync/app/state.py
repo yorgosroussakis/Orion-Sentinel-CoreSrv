@@ -166,18 +166,28 @@ class StateManager:
         """Complete a sync run with stats"""
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("""
-                UPDATE sync_runs 
-                SET completed_at = ?,
-                    urls_discovered = ?,
-                    urls_imported = ?,
-                    urls_failed = ?
-                    {} 
-                WHERE id = ?
-            """.format(", error_message = ?" if error_message else ""),
-                (datetime.utcnow().isoformat(), urls_discovered, urls_imported, 
-                 urls_failed) + ((error_message,) if error_message else ()) + (run_id,)
-            )
+            
+            if error_message:
+                cursor.execute("""
+                    UPDATE sync_runs 
+                    SET completed_at = ?,
+                        urls_discovered = ?,
+                        urls_imported = ?,
+                        urls_failed = ?,
+                        error_message = ?
+                    WHERE id = ?
+                """, (datetime.utcnow().isoformat(), urls_discovered, urls_imported, 
+                      urls_failed, error_message, run_id))
+            else:
+                cursor.execute("""
+                    UPDATE sync_runs 
+                    SET completed_at = ?,
+                        urls_discovered = ?,
+                        urls_imported = ?,
+                        urls_failed = ?
+                    WHERE id = ?
+                """, (datetime.utcnow().isoformat(), urls_discovered, urls_imported, 
+                      urls_failed, run_id))
     
     def get_stats(self) -> Dict:
         """Get overall statistics"""

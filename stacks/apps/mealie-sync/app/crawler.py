@@ -75,10 +75,10 @@ class URLNormalizer:
         # Rebuild query string
         new_query = urlencode(filtered_params, doseq=True)
         
-        # Rebuild URL without fragment
+        # Rebuild URL without fragment, using netloc as-is
         normalized = urlunparse((
             parsed.scheme,
-            parsed.hostname or parsed.netloc,  # Use hostname to normalize www
+            parsed.netloc,  # Use netloc directly to preserve domain correctly
             parsed.path,
             parsed.params,
             new_query,
