@@ -23,6 +23,8 @@ include:
     env_file: .env
   - path: stacks/observability/stack.yaml
     env_file: .env
+  - path: stacks/observability/netmap/compose.yml
+    env_file: .env
   - path: stacks/home/stack.yaml
     env_file: .env
   - path: stacks/apps/stack.yaml
