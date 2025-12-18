@@ -39,7 +39,7 @@ services:
       - "3003:3000"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.homepage.rule=Host(`homepage.${DOMAIN:-local}`)"
+      - "traefik.http.routers.homepage.rule=Host(`homepage.${DOMAIN:-orion.lan}`)"
       - "traefik.http.routers.homepage.entrypoints=websecure"
       - "traefik.http.routers.homepage.tls=true"
       - "traefik.http.services.homepage.loadbalancer.server.port=3000"
@@ -67,14 +67,14 @@ services:
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
       - TZ=${TZ:-UTC}
-      - SEARXNG_BASE_URL=https://search.${DOMAIN:-local}
+      - SEARXNG_BASE_URL=https://search.${DOMAIN:-orion.lan}
     volumes:
       - ${SEARCH_ROOT:-/srv/orion-sentinel-core/search}/searxng:/etc/searxng:rw
     ports:
       - "8888:8080"
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.searxng.rule=Host(`search.${DOMAIN:-local}`)"
+      - "traefik.http.routers.searxng.rule=Host(`search.${DOMAIN:-orion.lan}`)"
       - "traefik.http.routers.searxng.entrypoints=websecure"
       - "traefik.http.routers.searxng.tls=true"
       - "traefik.http.services.searxng.loadbalancer.server.port=8080"
@@ -128,7 +128,7 @@ networks:
   orion_backbone_net:
     name: orion_backbone_net
     external: true
-  
+
   orion_proxy_net:
     name: orion_proxy_net
     external: true

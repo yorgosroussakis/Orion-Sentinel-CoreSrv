@@ -37,15 +37,15 @@ services:
       - TZ=${TZ:-Europe/Amsterdam}
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ${GATEWAY_CONFIG_ROOT:-/srv/docker/gateway}/traefik/traefik.yml:/etc/traefik/traefik.yml:ro
-      - ${GATEWAY_CONFIG_ROOT:-/srv/docker/gateway}/traefik/dynamic:/etc/traefik/dynamic:ro
-      - ${GATEWAY_CONFIG_ROOT:-/srv/docker/gateway}/traefik/acme:/acme
+      - ${GATEWAY_CONFIG_ROOT:-/srv/orion-sentinel-core/core}/traefik/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ${GATEWAY_CONFIG_ROOT:-/srv/orion-sentinel-core/core}/traefik/dynamic:/etc/traefik/dynamic:ro
+      - ${GATEWAY_CONFIG_ROOT:-/srv/orion-sentinel-core/core}/traefik/acme:/acme
     networks:
       - orion_gateway_net
       - orion_backbone_net
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.traefik.rule=Host(`traefik.${DOMAIN:-local}`)"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.${DOMAIN:-orion.lan}`)"
       - "traefik.http.routers.traefik.entrypoints=websecure"
       - "traefik.http.routers.traefik.tls=true"
       - "traefik.http.services.traefik.loadbalancer.server.port=8080"
@@ -57,7 +57,6 @@ services:
       start_period: 10s
 
 
-
 ############################
 # NETWORKS
 ############################
@@ -65,9 +64,9 @@ services:
 networks:
   orion_gateway_net:
     name: orion_gateway_net
-    driver: bridge
+    external: true
   # Backbone network for cross-module communication
   # Other modules can attach to this to get reverse proxy access
   orion_backbone_net:
     name: orion_backbone_net
-    driver: bridge
+    external: true

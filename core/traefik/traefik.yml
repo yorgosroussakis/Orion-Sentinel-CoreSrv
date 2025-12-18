@@ -27,6 +27,10 @@ providers:
 api:
   dashboard: true
 
+# Health check endpoint for Docker healthcheck
+ping:
+  entryPoint: "web"
+
 # Example ACME config for future use (commented by default)
 # certificatesResolvers:
 #   le:

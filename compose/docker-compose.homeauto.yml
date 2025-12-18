@@ -38,9 +38,9 @@ services:
     environment:
       - TZ=${TZ:-Europe/Amsterdam}
     volumes:
-      - ${HOMEAUTO_CONFIG_ROOT:-/srv/docker/homeauto}/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
-      - ${HOMEAUTO_CONFIG_ROOT:-/srv/docker/homeauto}/mosquitto/data:/mosquitto/data
-      - ${HOMEAUTO_CONFIG_ROOT:-/srv/docker/homeauto}/mosquitto/log:/mosquitto/log
+      - ${HOMEAUTO_CONFIG_ROOT:-/srv/orion-sentinel-core/home-automation}/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+      - ${HOMEAUTO_CONFIG_ROOT:-/srv/orion-sentinel-core/home-automation}/mosquitto/data:/mosquitto/data
+      - ${HOMEAUTO_CONFIG_ROOT:-/srv/orion-sentinel-core/home-automation}/mosquitto/log:/mosquitto/log
     ports:
       - "1883:1883"
       - "9001:9001"
@@ -51,18 +51,21 @@ services:
 
   ############################
   # ZIGBEE2MQTT: Zigbee Gateway
+  # Optional - requires Zigbee USB coordinator
+  # Enable with: ./scripts/orionctl up homeauto zigbee
   ############################
 
   zigbee2mqtt:
     image: koenkk/zigbee2mqtt:1.40.2
     container_name: orion_zigbee2mqtt
+    profiles: ["zigbee"]
     restart: unless-stopped
     depends_on:
       - mosquitto
     environment:
       - TZ=${TZ:-Europe/Amsterdam}
     volumes:
-      - ${HOMEAUTO_CONFIG_ROOT:-/srv/docker/homeauto}/zigbee2mqtt/data:/app/data
+      - ${HOMEAUTO_CONFIG_ROOT:-/srv/orion-sentinel-core/home-automation}/zigbee2mqtt/data:/app/data
       - /run/udev:/run/udev:ro
     devices:
       - ${ZIGBEE_DEVICE:-/dev/ttyACM0}:/dev/ttyACM0
@@ -73,13 +76,14 @@ services:
       - no-new-privileges:true
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.zigbee2mqtt.rule=Host(`zigbee.${DOMAIN:-local}`)"
+      - "traefik.http.routers.zigbee2mqtt.rule=Host(`zigbee.${DOMAIN:-orion.lan}`)"
       - "traefik.http.routers.zigbee2mqtt.entrypoints=websecure"
       - "traefik.http.routers.zigbee2mqtt.tls=true"
       - "traefik.http.services.zigbee2mqtt.loadbalancer.server.port=8080"
 
   ############################
   # HOME ASSISTANT: Smart Home Hub
+  # Accessible directly at http://<host-ip>:8123 even when Traefik is down
   ############################
 
   homeassistant:
@@ -91,8 +95,10 @@ services:
     environment:
       - TZ=${TZ:-Europe/Amsterdam}
     volumes:
-      - ${HOMEAUTO_CONFIG_ROOT:-/srv/docker/homeauto}/homeassistant:/config
+      - ${HOMEAUTO_CONFIG_ROOT:-/srv/orion-sentinel-core/home-automation}/homeassistant:/config
       - /etc/localtime:/etc/localtime:ro
+    ports:
+      - "8123:8123"
     networks:
       - orion_homeauto_net
       - orion_backbone_net
@@ -100,7 +106,7 @@ services:
       - no-new-privileges:true
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.homeassistant.rule=Host(`ha.${DOMAIN:-local}`)"
+      - "traefik.http.routers.homeassistant.rule=Host(`ha.${DOMAIN:-orion.lan}`)"
       - "traefik.http.routers.homeassistant.entrypoints=websecure"
       - "traefik.http.routers.homeassistant.tls=true"
       - "traefik.http.services.homeassistant.loadbalancer.server.port=8123"
@@ -117,13 +123,13 @@ services:
       - TZ=${TZ:-Europe/Amsterdam}
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
-      - BASE_URL=https://mealie.${DOMAIN:-local}
+      - BASE_URL=https://mealie.${DOMAIN:-orion.lan}
       - ALLOW_SIGNUP=${MEALIE_ALLOW_SIGNUP:-true}
       - MAX_WORKERS=1
       - WEB_CONCURRENCY=1
       - API_DOCS=true
     volumes:
-      - ${HOMEAUTO_CONFIG_ROOT:-/srv/docker/homeauto}/mealie:/app/data
+      - ${HOMEAUTO_CONFIG_ROOT:-/srv/orion-sentinel-core/home-automation}/mealie:/app/data
     networks:
       - orion_homeauto_net
       - orion_backbone_net
@@ -131,7 +137,7 @@ services:
       - no-new-privileges:true
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.mealie.rule=Host(`mealie.${DOMAIN:-local}`)"
+      - "traefik.http.routers.mealie.rule=Host(`mealie.${DOMAIN:-orion.lan}`)"
       - "traefik.http.routers.mealie.entrypoints=websecure"
       - "traefik.http.routers.mealie.tls=true"
       - "traefik.http.services.mealie.loadbalancer.server.port=9000"
@@ -151,7 +157,7 @@ services:
       - POSTGRES_USER=${DSMR_DB_USER:-dsmrreader}
       - POSTGRES_PASSWORD=${DSMR_DB_PASSWORD:-dsmrreader}
     volumes:
-      - ${HOMEAUTO_CONFIG_ROOT:-/srv/docker/homeauto}/dsmr/db:/var/lib/postgresql/data
+      - ${HOMEAUTO_CONFIG_ROOT:-/srv/orion-sentinel-core/home-automation}/dsmr/db:/var/lib/postgresql/data
     networks:
       - orion_homeauto_net
     security_opt:
@@ -179,7 +185,7 @@ services:
     devices:
       - ${DSMR_SERIAL_PORT:-/dev/ttyUSB0}:${DSMR_SERIAL_PORT:-/dev/ttyUSB0}
     volumes:
-      - ${HOMEAUTO_CONFIG_ROOT:-/srv/docker/homeauto}/dsmr/app:/app
+      - ${HOMEAUTO_CONFIG_ROOT:-/srv/orion-sentinel-core/home-automation}/dsmr/app:/app
     networks:
       - orion_homeauto_net
       - orion_backbone_net
@@ -187,7 +193,7 @@ services:
       - no-new-privileges:true
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.dsmr.rule=Host(`energy.${DOMAIN:-local}`)"
+      - "traefik.http.routers.dsmr.rule=Host(`energy.${DOMAIN:-orion.lan}`)"
       - "traefik.http.routers.dsmr.entrypoints=websecure"
       - "traefik.http.routers.dsmr.tls=true"
       - "traefik.http.services.dsmr.loadbalancer.server.port=80"
@@ -199,7 +205,7 @@ services:
 networks:
   orion_homeauto_net:
     name: orion_homeauto_net
-    driver: bridge
+    external: true
   # Backbone network for cross-module communication (external)
   orion_backbone_net:
     name: orion_backbone_net

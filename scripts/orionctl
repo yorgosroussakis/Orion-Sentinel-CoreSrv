@@ -167,8 +167,8 @@ module_up() {
         info "Starting $module module..."
     fi
     
-    # Run the command
-    "${cmd_args[@]}" up -d
+    # Run the command with --remove-orphans to avoid warnings
+    "${cmd_args[@]}" up -d --remove-orphans
     
     success "$module module started"
     
@@ -340,16 +340,17 @@ USAGE:
 
 MODULES:
     media           Media stack (Jellyfin, *arr, qBittorrent, etc.)
-    gateway         Gateway stack (Traefik, Authelia, Redis)
+    gateway         Gateway stack (Traefik reverse proxy)
     observability   Monitoring stack (Prometheus, Grafana, Loki, etc.)
     homeauto        Home automation (Home Assistant, Zigbee2MQTT, Mealie, etc.)
 
 COMMANDS:
-    up MODULE [PROFILE]     Start a module (optional profile: media-core, media-vpn, media-extra)
+    up MODULE [PROFILE]     Start a module (optional profile: media-core, media-vpn, zigbee)
     down MODULE             Stop a module
     status [MODULE]         Show status (all modules if none specified)
     logs MODULE [SERVICE]   Follow logs for a module or specific service
     restart MODULE [SVC]    Restart a module or specific service
+    doctor                  Check for common issues (file vs directory, missing configs)
 
 EXAMPLES:
     # Start media stack (without VPN)
@@ -370,37 +371,158 @@ EXAMPLES:
     # Restart Sonarr
     ./scripts/orionctl restart media sonarr
 
-    # Start gateway (Traefik + Authelia)
+    # Start gateway (Traefik reverse proxy)
     ./scripts/orionctl up gateway
 
     # Start observability (Prometheus + Grafana)
     ./scripts/orionctl up observability
 
-    # Start home automation
+    # Start home automation (without Zigbee)
     ./scripts/orionctl up homeauto
 
+    # Start home automation WITH Zigbee
+    ./scripts/orionctl up homeauto zigbee
+
+    # Run diagnostics
+    ./scripts/orionctl doctor
+
 SETUP (before first run):
-    1. Copy env files:
-       cp env/.env.media.modular.example env/.env.media
-       # Edit as needed
+    1. Run bootstrap:
+       ./scripts/bootstrap-coresrv.sh
 
-    2. Create directories:
-       sudo mkdir -p /srv/media/{downloads,library}/{movies,tv}
-       sudo mkdir -p /srv/docker/media/{jellyfin,qbittorrent,sonarr,radarr,prowlarr,jellyseerr}/config
-       sudo chown -R $USER:$USER /srv/media /srv/docker/media
+    2. Review configuration:
+       nano .env
 
-    3. Start the media stack:
-       ./scripts/orionctl up media
+    3. Start the gateway first:
+       ./scripts/orionctl up gateway
+
+    4. Then start other modules:
+       ./scripts/orionctl up homeauto
+       ./scripts/orionctl up observability
 
 NOTES:
     - Each module can run independently
     - Media module is the primary, stable module (works without gateway)
     - Gateway module creates the backbone network for reverse proxy
-    - Other modules can optionally connect to gateway via backbone network
+    - Zigbee2MQTT requires profile: ./scripts/orionctl up homeauto zigbee
+    - Home Assistant is directly accessible at http://<host-ip>:8123
 
 For legacy monolithic stack, use: ./orionctl.sh
 For detailed documentation, see: README.md
 EOF
+}
+
+# Doctor command - check for common issues
+run_doctor() {
+    echo ""
+    info "Running diagnostics..."
+    echo ""
+    
+    local has_issues=0
+    local data_root="${GATEWAY_CONFIG_ROOT:-/srv/docker/gateway}"
+    local homeauto_root="${HOMEAUTO_CONFIG_ROOT:-/srv/docker/homeauto}"
+    local observability_root="${OBSERVABILITY_CONFIG_ROOT:-/srv/docker/observability}"
+    
+    # Try to read from env files for correct paths
+    if [ -f "$ENV_DIR/.env.gateway" ]; then
+        # shellcheck disable=SC1091
+        source "$ENV_DIR/.env.gateway" 2>/dev/null || true
+        data_root="${GATEWAY_CONFIG_ROOT:-$data_root}"
+    fi
+    if [ -f "$ENV_DIR/.env.homeauto" ]; then
+        # shellcheck disable=SC1091
+        source "$ENV_DIR/.env.homeauto" 2>/dev/null || true
+        homeauto_root="${HOMEAUTO_CONFIG_ROOT:-$homeauto_root}"
+    fi
+    if [ -f "$ENV_DIR/.env.observability" ]; then
+        # shellcheck disable=SC1091
+        source "$ENV_DIR/.env.observability" 2>/dev/null || true
+        observability_root="${OBSERVABILITY_CONFIG_ROOT:-$observability_root}"
+    fi
+    
+    echo "=== Checking required FILES (must NOT be directories) ==="
+    
+    # Check Traefik config file
+    local traefik_yml="${data_root}/traefik/traefik.yml"
+    if [ -d "$traefik_yml" ]; then
+        error "CRITICAL: $traefik_yml is a DIRECTORY but should be a FILE"
+        echo "  Fix: sudo rm -rf $traefik_yml && cp core/traefik/traefik.yml $traefik_yml"
+        has_issues=1
+    elif [ -f "$traefik_yml" ]; then
+        success "OK: $traefik_yml exists as a file"
+    else
+        warn "MISSING: $traefik_yml (will be created on bootstrap)"
+    fi
+    
+    # Check Mosquitto config file
+    local mosquitto_conf="${homeauto_root}/mosquitto/mosquitto.conf"
+    if [ -d "$mosquitto_conf" ]; then
+        error "CRITICAL: $mosquitto_conf is a DIRECTORY but should be a FILE"
+        echo "  Fix: sudo rm -rf $mosquitto_conf && cp home-automation/mosquitto/mosquitto.conf.example $mosquitto_conf"
+        has_issues=1
+    elif [ -f "$mosquitto_conf" ]; then
+        success "OK: $mosquitto_conf exists as a file"
+    else
+        warn "MISSING: $mosquitto_conf (will be created on bootstrap)"
+    fi
+    
+    # Check Prometheus config file
+    local prometheus_yml="${observability_root}/prometheus/prometheus.yml"
+    if [ -d "$prometheus_yml" ]; then
+        error "CRITICAL: $prometheus_yml is a DIRECTORY but should be a FILE"
+        echo "  Fix: sudo rm -rf $prometheus_yml && cp monitoring/prometheus/prometheus.yml $prometheus_yml"
+        has_issues=1
+    elif [ -f "$prometheus_yml" ]; then
+        success "OK: $prometheus_yml exists as a file"
+    else
+        warn "MISSING: $prometheus_yml (will be created on bootstrap)"
+    fi
+    
+    echo ""
+    echo "=== Checking required DIRECTORIES ==="
+    
+    # Check Traefik dynamic config directory
+    local traefik_dynamic="${data_root}/traefik/dynamic"
+    if [ -f "$traefik_dynamic" ]; then
+        error "CRITICAL: $traefik_dynamic is a FILE but should be a DIRECTORY"
+        has_issues=1
+    elif [ -d "$traefik_dynamic" ]; then
+        success "OK: $traefik_dynamic exists as a directory"
+    else
+        warn "MISSING: $traefik_dynamic"
+    fi
+    
+    echo ""
+    echo "=== Checking Docker networks ==="
+    
+    for net in orion_backbone_net orion_gateway_net orion_homeauto_net orion_observability_net orion_media_net; do
+        if docker network inspect "$net" >/dev/null 2>&1; then
+            success "OK: Network $net exists"
+        else
+            warn "MISSING: Network $net (will be created by bootstrap)"
+        fi
+    done
+    
+    echo ""
+    echo "=== Checking Zigbee device (optional) ==="
+    
+    local zigbee_device="${ZIGBEE_DEVICE:-/dev/ttyACM0}"
+    if [ -e "$zigbee_device" ]; then
+        success "OK: Zigbee device $zigbee_device found"
+    else
+        warn "NOT FOUND: Zigbee device $zigbee_device"
+        echo "  Zigbee2MQTT requires a USB coordinator. If not using Zigbee, this is OK."
+        echo "  Start homeauto without zigbee profile: ./scripts/orionctl up homeauto"
+    fi
+    
+    echo ""
+    if [ $has_issues -eq 1 ]; then
+        error "Issues found! Run ./scripts/bootstrap-coresrv.sh to fix."
+        return 1
+    else
+        success "All checks passed!"
+        return 0
+    fi
 }
 
 # Main command handling
@@ -443,6 +565,10 @@ case "$CMD" in
     
     help|--help|-h|"")
         show_help
+        ;;
+    
+    doctor)
+        run_doctor
         ;;
     
     *)
