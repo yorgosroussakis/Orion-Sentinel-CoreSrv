@@ -73,6 +73,50 @@ fail() {
     exit 1
 }
 
+# Ensure a path is a directory (not a file)
+# If it exists as a file, remove and recreate as directory
+ensure_dir() {
+    local dir_path="$1"
+    if [ -f "$dir_path" ]; then
+        warn "Path $dir_path exists as file, converting to directory..."
+        rm -f "$dir_path"
+    fi
+    mkdir -p "$dir_path"
+}
+
+# Ensure a path is a file (not a directory)
+# If it exists as a directory, remove and recreate as file
+# Args: path, default_content (optional), source_template (optional)
+ensure_file() {
+    local file_path="$1"
+    local default_content="${2:-}"
+    local source_template="${3:-}"
+    
+    # Make sure parent directory exists
+    mkdir -p "$(dirname "$file_path")"
+    
+    if [ -d "$file_path" ]; then
+        warn "Path $file_path exists as directory, converting to file..."
+        rm -rf "$file_path"
+    fi
+    
+    if [ ! -f "$file_path" ]; then
+        if [ -n "$source_template" ] && [ -f "$source_template" ]; then
+            info "Creating $file_path from template..."
+            cp "$source_template" "$file_path"
+        elif [ -n "$default_content" ]; then
+            info "Creating $file_path with default content..."
+            echo "$default_content" > "$file_path"
+        else
+            info "Creating empty $file_path..."
+            touch "$file_path"
+        fi
+        success "Created file: $file_path"
+    else
+        success "File already exists: $file_path"
+    fi
+}
+
 # ============================================================================
 # MAIN SCRIPT
 # ============================================================================
@@ -239,31 +283,55 @@ fi
 
 print_header "Step 4: Copying Configuration Templates"
 
-# Traefik configuration
-if [ -f core/traefik/traefik.yml ] && [ ! -f "$DATA_ROOT"/core/traefik/traefik.yml ]; then
-    info "Copying Traefik configuration..."
-    cp -r core/traefik/* "$DATA_ROOT"/core/traefik/ 2>/dev/null || true
-    success "Traefik configuration copied"
+# IMPORTANT: These must be FILES, not directories
+# Using ensure_file to prevent "is a directory" mount errors
+
+# Traefik configuration - MUST be a file, not directory
+if [ -f core/traefik/traefik.yml ]; then
+    ensure_file "$DATA_ROOT/core/traefik/traefik.yml" "" "core/traefik/traefik.yml"
+    # Copy dynamic config directory
+    ensure_dir "$DATA_ROOT/core/traefik/dynamic"
+    if [ -d core/traefik/dynamic ]; then
+        cp -n core/traefik/dynamic/* "$DATA_ROOT/core/traefik/dynamic/" 2>/dev/null || true
+        success "Traefik dynamic config copied"
+    fi
+    ensure_dir "$DATA_ROOT/core/traefik/acme"
 fi
 
-# Authelia configuration
+# Mosquitto configuration - MUST be a file, not directory
+if [ -f home-automation/mosquitto/mosquitto.conf.example ]; then
+    ensure_file "$DATA_ROOT/home-automation/mosquitto/mosquitto.conf" "" "home-automation/mosquitto/mosquitto.conf.example"
+    ensure_dir "$DATA_ROOT/home-automation/mosquitto/data"
+    ensure_dir "$DATA_ROOT/home-automation/mosquitto/log"
+fi
+
+# Prometheus configuration - MUST be a file, not directory
+if [ -f monitoring/prometheus/prometheus.yml ]; then
+    ensure_file "$DATA_ROOT/monitoring/prometheus/prometheus.yml" "" "monitoring/prometheus/prometheus.yml"
+    ensure_dir "$DATA_ROOT/monitoring/prometheus/data"
+fi
+
+# Loki configuration - MUST be a file, not directory
+if [ -f monitoring/loki/config.yml ]; then
+    ensure_file "$DATA_ROOT/monitoring/loki/config.yml" "" "monitoring/loki/config.yml"
+fi
+
+# Promtail configuration - MUST be a file, not directory
+if [ -f monitoring/promtail/config.yml ]; then
+    ensure_file "$DATA_ROOT/monitoring/promtail/config.yml" "" "monitoring/promtail/config.yml"
+fi
+
+# Authelia configuration (optional - not used in Traefik-only mode)
 if [ -f core/authelia/configuration.yml.example ] && [ ! -f "$DATA_ROOT"/core/authelia/configuration.yml ]; then
-    info "Copying Authelia configuration..."
+    info "Copying Authelia configuration (optional)..."
     cp core/authelia/configuration.yml.example "$DATA_ROOT"/core/authelia/configuration.yml
     success "Authelia configuration copied"
 fi
 
 if [ -f core/authelia/users.yml.example ] && [ ! -f "$DATA_ROOT"/core/authelia/users.yml ]; then
-    info "Copying Authelia users template..."
+    info "Copying Authelia users template (optional)..."
     cp core/authelia/users.yml.example "$DATA_ROOT"/core/authelia/users.yml
     success "Authelia users template copied"
-fi
-
-# Mosquitto configuration
-if [ -f home-automation/mosquitto/mosquitto.conf.example ] && [ ! -f "$DATA_ROOT"/home-automation/mosquitto/mosquitto.conf ]; then
-    info "Copying Mosquitto configuration..."
-    cp home-automation/mosquitto/mosquitto.conf.example "$DATA_ROOT"/home-automation/mosquitto/mosquitto.conf
-    success "Mosquitto configuration copied"
 fi
 
 # Frigate NVR configuration

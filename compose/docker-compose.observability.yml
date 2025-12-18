@@ -82,8 +82,8 @@ services:
       - '--web.console.templates=/usr/share/prometheus/consoles'
       - '--web.enable-lifecycle'
     volumes:
-      - ${OBSERVABILITY_CONFIG_ROOT:-/srv/docker/observability}/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ${OBSERVABILITY_CONFIG_ROOT:-/srv/docker/observability}/prometheus/data:/prometheus
+      - ${OBSERVABILITY_CONFIG_ROOT:-/srv/orion-sentinel-core/monitoring}/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ${OBSERVABILITY_CONFIG_ROOT:-/srv/orion-sentinel-core/monitoring}/prometheus/data:/prometheus
     networks:
       - orion_observability_net
       - orion_backbone_net
@@ -95,7 +95,7 @@ services:
       start_period: 30s
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.prometheus.rule=Host(`prometheus.${DOMAIN:-local}`)"
+      - "traefik.http.routers.prometheus.rule=Host(`prometheus.${DOMAIN:-orion.lan}`)"
       - "traefik.http.routers.prometheus.entrypoints=websecure"
       - "traefik.http.routers.prometheus.tls=true"
       - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
@@ -111,8 +111,8 @@ services:
     user: "${PUID:-1000}:${PGID:-1000}"
     command: -config.file=/etc/loki/config.yml
     volumes:
-      - ${OBSERVABILITY_CONFIG_ROOT:-/srv/docker/observability}/loki:/loki
-      - ${OBSERVABILITY_CONFIG_ROOT:-/srv/docker/observability}/loki/config.yml:/etc/loki/config.yml:ro
+      - ${OBSERVABILITY_CONFIG_ROOT:-/srv/orion-sentinel-core/monitoring}/loki:/loki
+      - ${OBSERVABILITY_CONFIG_ROOT:-/srv/orion-sentinel-core/monitoring}/loki/config.yml:/etc/loki/config.yml:ro
     networks:
       - orion_observability_net
     healthcheck:
@@ -134,7 +134,7 @@ services:
     volumes:
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
       - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ${OBSERVABILITY_CONFIG_ROOT:-/srv/docker/observability}/promtail/config.yml:/etc/promtail/config.yml:ro
+      - ${OBSERVABILITY_CONFIG_ROOT:-/srv/orion-sentinel-core/monitoring}/promtail/config.yml:/etc/promtail/config.yml:ro
     networks:
       - orion_observability_net
 
@@ -151,11 +151,11 @@ services:
       - TZ=${TZ:-Europe/Amsterdam}
       - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-changeme}
-      - GF_SERVER_ROOT_URL=https://grafana.${DOMAIN:-local}
+      - GF_SERVER_ROOT_URL=https://grafana.${DOMAIN:-orion.lan}
       - GF_INSTALL_PLUGINS=${GRAFANA_INSTALL_PLUGINS:-}
     volumes:
-      - ${OBSERVABILITY_CONFIG_ROOT:-/srv/docker/observability}/grafana/data:/var/lib/grafana
-      - ${OBSERVABILITY_CONFIG_ROOT:-/srv/docker/observability}/grafana/provisioning:/etc/grafana/provisioning
+      - ${OBSERVABILITY_CONFIG_ROOT:-/srv/orion-sentinel-core/monitoring}/grafana/data:/var/lib/grafana
+      - ${OBSERVABILITY_CONFIG_ROOT:-/srv/orion-sentinel-core/monitoring}/grafana/provisioning:/etc/grafana/provisioning
     networks:
       - orion_observability_net
       - orion_backbone_net
@@ -167,7 +167,7 @@ services:
       start_period: 30s
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.grafana.rule=Host(`grafana.${DOMAIN:-local}`)"
+      - "traefik.http.routers.grafana.rule=Host(`grafana.${DOMAIN:-orion.lan}`)"
       - "traefik.http.routers.grafana.entrypoints=websecure"
       - "traefik.http.routers.grafana.tls=true"
       - "traefik.http.services.grafana.loadbalancer.server.port=3000"
@@ -177,13 +177,13 @@ services:
   ############################
 
   uptime-kuma:
-    image: louislam/uptime-kuma:1.23.11
+    image: ${UPTIME_KUMA_IMAGE:-louislam/uptime-kuma:1}
     container_name: orion_uptime_kuma
     restart: unless-stopped
     environment:
       - TZ=${TZ:-Europe/Amsterdam}
     volumes:
-      - ${OBSERVABILITY_CONFIG_ROOT:-/srv/docker/observability}/uptime-kuma:/app/data
+      - ${OBSERVABILITY_CONFIG_ROOT:-/srv/orion-sentinel-core/monitoring}/uptime-kuma:/app/data
     networks:
       - orion_observability_net
       - orion_backbone_net
@@ -195,7 +195,7 @@ services:
       start_period: 30s
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.uptime-kuma.rule=Host(`status.${DOMAIN:-local}`)"
+      - "traefik.http.routers.uptime-kuma.rule=Host(`status.${DOMAIN:-orion.lan}`)"
       - "traefik.http.routers.uptime-kuma.entrypoints=websecure"
       - "traefik.http.routers.uptime-kuma.tls=true"
       - "traefik.http.services.uptime-kuma.loadbalancer.server.port=3001"
@@ -207,7 +207,7 @@ services:
 networks:
   orion_observability_net:
     name: orion_observability_net
-    driver: bridge
+    external: true
   # Backbone network for cross-module communication (external)
   orion_backbone_net:
     name: orion_backbone_net

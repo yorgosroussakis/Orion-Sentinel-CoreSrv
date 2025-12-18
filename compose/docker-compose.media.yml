@@ -313,7 +313,7 @@ services:
 networks:
   orion_media_net:
     name: orion_media_net
-    driver: bridge
+    external: true
   # Backbone network for cross-module communication (Traefik access, etc.)
   orion_backbone_net:
     name: orion_backbone_net

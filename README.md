@@ -23,6 +23,64 @@ make up-media
 
 Access Jellyfin at `http://localhost:8096` - you're done!
 
+## Core Lab Quick Start (No Media)
+
+For users who want **Gateway + Home Automation + Observability** without the media stack:
+
+```bash
+# 1. Bootstrap (creates directories, copies config templates)
+./scripts/bootstrap-coresrv.sh
+
+# 2. Run diagnostics to verify setup
+./scripts/orionctl doctor
+
+# 3. Start gateway (Traefik reverse proxy)
+./scripts/orionctl up gateway
+
+# 4. Start home automation (Home Assistant + Mosquitto + Mealie)
+./scripts/orionctl up homeauto
+
+# 5. Start observability (Prometheus + Grafana + Uptime Kuma)
+./scripts/orionctl up observability
+
+# 6. Check status
+./scripts/orionctl status
+```
+
+### Access Your Services
+
+**Always available (direct port access):**
+- Home Assistant: `http://<host-ip>:8123`
+
+**Via Traefik (once DNS is configured):**
+- Traefik Dashboard: `https://traefik.orion.lan`
+- Home Assistant: `https://ha.orion.lan`
+- Mealie: `https://mealie.orion.lan`
+- Grafana: `https://grafana.orion.lan`
+- Prometheus: `https://prometheus.orion.lan`
+- Uptime Kuma: `https://status.orion.lan`
+
+### Optional: Enable Zigbee2MQTT
+
+If you have a Zigbee USB coordinator connected:
+
+```bash
+# Start homeauto with zigbee profile
+./scripts/orionctl up homeauto zigbee
+```
+
+### Troubleshooting
+
+```bash
+# Check for common issues (file vs directory mount errors)
+./scripts/orionctl doctor
+
+# View logs for a specific module
+./scripts/orionctl logs gateway
+./scripts/orionctl logs homeauto
+./scripts/orionctl logs observability
+```
+
 ## Features
 
 | Module | Services | Description |
