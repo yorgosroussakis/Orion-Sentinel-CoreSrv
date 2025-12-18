@@ -419,9 +419,9 @@ run_doctor() {
     echo ""
     
     local has_issues=0
-    local data_root="${GATEWAY_CONFIG_ROOT:-/srv/docker/gateway}"
-    local homeauto_root="${HOMEAUTO_CONFIG_ROOT:-/srv/docker/homeauto}"
-    local observability_root="${OBSERVABILITY_CONFIG_ROOT:-/srv/docker/observability}"
+    local data_root="${GATEWAY_CONFIG_ROOT:-/srv/orion-sentinel-core/core}"
+    local homeauto_root="${HOMEAUTO_CONFIG_ROOT:-/srv/orion-sentinel-core/home-automation}"
+    local observability_root="${OBSERVABILITY_CONFIG_ROOT:-/srv/orion-sentinel-core/monitoring}"
     
     # Try to read from env files for correct paths
     if [ -f "$ENV_DIR/.env.gateway" ]; then
